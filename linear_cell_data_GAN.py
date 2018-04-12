@@ -8,12 +8,13 @@ import time
 
 
 #data = np.load("/Users/Jack/Desktop/neuraldev/AdCo/matrix_GAN_2D.npy")
-data = np.load("/home/jack/caltech_research/neuraldev/GAN_data.npy")
+#data = np.load("/home/jack/caltech_research/neuraldev/GAN_data.npy")
+data = np.load("/home/jack/caltech_research/neuraldev/GAN_data_normalized_-1to1.npy")
 #data = data.tolist().toarray()
 data = data.transpose()
 
 batch_size = 26
-num_steps = 25000
+num_steps = 15000
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -35,7 +36,7 @@ def generator(x, reuse=False):
         conv4 = tf.layers.conv2d_transpose(conv3, 1, [30,1], strides=[3,1])# padding="same")
 
         conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1])# padding="same")
-        conv5 = tf.nn.relu(conv5)
+        conv5 = tf.nn.tanh(conv5)
         #conv5 = tf.nn.sigmoid(conv5)
         conv5 = tf.squeeze(conv5, axis = 2)
         print(conv5.get_shape())
@@ -92,7 +93,7 @@ def discriminator(x, reuse=False):
         dense2 = tf.layers.dense(dense1, 512)
         dense2 = tf.nn.tanh(dense2)
         dense3 = tf.layers.dense(dense2, 2)
-        dense3 = tf.nn.sigmoid(dense3)
+        dense3 = tf.nn.tanh(dense3)
         """
         print(x.get_shape(),"xshape")
         print(conv1.get_shape(),'conv1')
@@ -152,28 +153,21 @@ print(disc_concat.get_shape(),'concat')
 gan_model = discriminator(gen_sample,reuse=True)
 
 
-disc_target = tf.placeholder(tf.int32, shape=[None])
-gen_target = tf.placeholder(tf.int32, shape=[None])
+#disc_target = tf.placeholder(tf.int32, shape=[None])
+#disc_target = np.zeros(shape=(batch_size*2,2))
+#disc_target[0] =
+batch_disc_y = np.concatenate(
+            [np.ones([batch_size]), np.zeros([batch_size])-1], axis=0)
+batch =np.flip(batch_disc_y,axis =0)
+disc_target = np.stack((batch_disc_y,batch), axis =0).transpose()
+#gen_target = tf.placeholder(tf.int32, shape=[None])
+gen_target = np.stack((np.ones([batch_size]),np.zeros(batch_size)-1),axis =0).transpose()
 
 
 
+disc_loss = tf.reduce_mean((disc_concat-disc_target)**2)
 
-
-"""
-disc_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-    logits=disc_concat, labels=disc_target))#[:,0]
-#print(tf.nn.sparse_softmax_cross_entropy_with_logits(
- #   logits=disc_concat, labels=disc_target))
-gen_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-    logits=gan_model, labels=gen_target))#[:,1]
-"""
-disc_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=disc_concat[:,0], labels=disc_target))#[:,0]
-#print(tf.nn.sparse_softmax_cross_entropy_with_logits(
- #   logits=disc_concat, labels=disc_target))
-gen_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-    logits=gan_model[:,1], labels=gen_target))#[:,1]
-
+gen_loss = tf.reduce_mean((gan_model-gen_target)**2)
 
 optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.01)
 optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.01)
@@ -209,14 +203,14 @@ with tf.Session() as sess:
         epoch_x = data[sample,:]
         epoch_x = np.reshape(epoch_x, newshape=[-1, 27998, 1])
         z = np.random.uniform(-1.0, 1.0, size=[batch_size, vector_dim])
-        batch_disc_y = np.concatenate(
-            [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
+        #batch_disc_y = np.concatenate(
+        #    [np.ones([batch_size]), np.zeros([batch_size])-1], axis=0)
         # Generator tries to fool the discriminator, thus targets are 1.
-        batch_gen_y = np.ones([batch_size])
+        #batch_gen_y = np.ones([batch_size])
         #print(batch_disc_y.shape, "batch")
         # Training
-        feed_dict = {real_image_input: epoch_x, random_vector: z,
-                     disc_target: batch_disc_y, gen_target: batch_gen_y}
+        feed_dict = {real_image_input: epoch_x, random_vector: z}
+        #             disc_target: batch_disc_y, gen_target: batch_gen_y}
         _, _, gl, dl = sess.run([train_gen, train_disc, gen_loss, disc_loss],
                                 feed_dict=feed_dict)
         if i % 100 == 0 or i == 1:
@@ -229,6 +223,15 @@ with tf.Session() as sess:
     print(finish)
     out.close()
 
+    sample = np.random.randint(n_samp, size=batch_size)
+    epoch_x = data[sample,:]
+    epoch_x = np.reshape(epoch_x, newshape=[-1, 27998, 1])
+    z = np.random.uniform(-1., 1., size=[100, vector_dim])
+    samp = sess.run(gen_sample, feed_dict={random_vector: z})
+    g = sess.run(disc_real, feed_dict={real_image_input: epoch_x})
+    o = sess.run(disc_real, feed_dict={real_image_input: samp})
+    np.save("disc_output_fake.npy",o)    
+    np.save("disc_output.npy", g)
 #     # Generate images from noise, using the generator network.
 #     f, a = plt.subplots(4, 6, figsize=(6, 4))
 #     for i in range(6):
