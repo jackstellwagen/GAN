@@ -13,8 +13,8 @@ data = np.load("/home/jack/caltech_research/neuraldev/GAN_data_normalized_-1to1.
 #data = data.tolist().toarray()
 data = data.transpose()
 
-batch_size = 26
-num_steps = 15000
+batch_size = 40
+num_steps = 600
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -27,15 +27,15 @@ def generator(x, reuse=False):
         x = tf.reshape(x, shape=[-1, 332, 1, 64])
 
 
-        conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1])
+        conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())
 
-        conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1])#, padding="same")
+        conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())#, padding="same")
 
-        conv3 = tf.layers.conv2d_transpose(conv2, 8, [30,1], strides=[3,1])#, padding="same")
+        conv3 = tf.layers.conv2d_transpose(conv2, 16, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())#, padding="same")
 
-        conv4 = tf.layers.conv2d_transpose(conv3, 1, [30,1], strides=[3,1])# padding="same")
+        conv4 = tf.layers.conv2d_transpose(conv3, 4, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
 
-        conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1])# padding="same")
+        conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
         conv5 = tf.nn.tanh(conv5)
         #conv5 = tf.nn.sigmoid(conv5)
         conv5 = tf.squeeze(conv5, axis = 2)
@@ -75,16 +75,16 @@ def discriminator(x, reuse=False):
         # Typical convolutional neural network to classify images.
         #print(x.get_shape(),'i')
         #conv1 = conv1d()
-        conv1 = tf.layers.conv1d(x,16, 30, padding = "Same")
+        conv1 = tf.layers.conv1d(x,8, 30, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv1 = tf.nn.tanh(conv1)
         conv1_pool = tf.layers.average_pooling1d(conv1, 3, 3,  padding = "Same")
-        conv2 = tf.layers.conv1d(conv1_pool, 32, 30,  padding = "Same")
+        conv2 = tf.layers.conv1d(conv1_pool, 16, 30,  padding = "Same", kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv2 = tf.nn.tanh(conv2)
         conv2_pool = tf.layers.average_pooling1d(conv2, 3, 3,  padding = "Same")
-        conv3 = tf.layers.conv1d(conv2_pool, 64, 30, padding = "Same")
+        conv3 = tf.layers.conv1d(conv2_pool, 32, 30, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv3 = tf.nn.tanh(conv3)
         conv3_pool = tf.layers.average_pooling1d(conv3, 3, 3,  padding = "Same")
-        conv4 = tf.layers.conv1d(conv3_pool, 64, 30, padding = "Same")
+        conv4 = tf.layers.conv1d(conv3_pool, 64, 30, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer())
         conv4 = tf.nn.tanh(conv4)
         conv4_pool = tf.layers.average_pooling1d(conv4, 3, 3,  padding = "Same")
         flatten = tf.contrib.layers.flatten(conv4_pool)
@@ -93,8 +93,10 @@ def discriminator(x, reuse=False):
         dense2 = tf.layers.dense(dense1, 512)
         dense2 = tf.nn.tanh(dense2)
         dense3 = tf.layers.dense(dense2, 2)
-        dense3 = tf.nn.tanh(dense3)
-        """
+        #dense3 = tf.nn.tanh(dense3)
+        #dense3 = tf.nn.tanh(dense3)
+    return dense3
+"""
         print(x.get_shape(),"xshape")
         print(conv1.get_shape(),'conv1')
         print(conv1_pool.get_shape(), "pool1")
@@ -108,13 +110,13 @@ def discriminator(x, reuse=False):
         print(dense1.get_shape(), 'dense1')
         print(dense2.get_shape(), 'dense2')
         print(dense3.get_shape(), 'dense3')
-        """
+"""
 
 
 
         #print(conv2.get_shape(), "conv2")
 
-        """
+"""
         print(x.get_shape(),"xshape")
         conv1 = tf.layers.conv2d(x, 64, [5,4])
         print(conv1.get_shape(),'o')
@@ -135,10 +137,10 @@ def discriminator(x, reuse=False):
         # Output 2 classes: Real and Fake images
         x = tf.layers.dense(conv2, 2)
         #print(x.get_shape(),'final out')
-        """
+"""
 
 
-    return dense3
+#return dense3
 
 random_vector = tf.placeholder(tf.float32,shape=[None,vector_dim])
 real_image_input = tf.placeholder(tf.float32, shape=[None,27998, 1])
@@ -152,30 +154,33 @@ print(disc_concat.get_shape(),'concat')
 
 gan_model = discriminator(gen_sample,reuse=True)
 
+gen_target = tf.placeholder(tf.float32, shape=[None,2])
+disc_target = tf.placeholder(tf.float32, shape=[None,2])
+"""
+disc_target = np.concatenate(
+            [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
+gen_target = np.ones([batch_size]) 
+"""
 
-#disc_target = tf.placeholder(tf.int32, shape=[None])
-#disc_target = np.zeros(shape=(batch_size*2,2))
-#disc_target[0] =
-batch_disc_y = np.concatenate(
-            [np.ones([batch_size]), np.zeros([batch_size])-1], axis=0)
-batch =np.flip(batch_disc_y,axis =0)
-disc_target = np.stack((batch_disc_y,batch), axis =0).transpose()
-#gen_target = tf.placeholder(tf.int32, shape=[None])
-gen_target = np.stack((np.ones([batch_size]),np.zeros(batch_size)-1),axis =0).transpose()
+disc_loss = tf.reduce_mean(tf.pow(disc_concat-disc_target,2))
 
+gen_loss = tf.reduce_mean(tf.pow(gan_model-gen_target,2))
+#disc_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+#    logits=disc_concat, labels=disc_target))
 
+#gen_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+#    logits=gan_model, labels=gen_target))
 
-disc_loss = tf.reduce_mean((disc_concat-disc_target)**2)
-
-gen_loss = tf.reduce_mean((gan_model-gen_target)**2)
-
-optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.01)
-optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.01)
+optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.001)
+optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.001)
 
 
 gen_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator')
 disc_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator')
-
+print(gen_vars, "gen_vars")
+print(type(gen_vars),"gen_vars type")
+print(disc_vars, "disc_vars")
+print(type(disc_vars),"disc_vars type")
 
 train_gen = optimizer_gen.minimize(gen_loss, var_list=gen_vars)
 train_disc = optimizer_disc.minimize(disc_loss, var_list=disc_vars)
@@ -183,7 +188,7 @@ train_disc = optimizer_disc.minimize(disc_loss, var_list=disc_vars)
 
 
 init = tf.global_variables_initializer()
-
+#init = tf.contrib.layers.xavier_initializer_conv2d()
 
 
 saver = tf.train.Saver()
@@ -193,8 +198,8 @@ with tf.Session() as sess:
     """
     batch_disc_y = np.concatenate(
             [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
-    batch =np.flip(batch_disc_y,axis =0)
-    batch_disc_y = np.stack((batch_disc_y,batch), axis =0).transpose()
+    #batch =np.flip(batch_disc_y,axis =0)
+    #batch_disc_y = np.stack((batch_disc_y,batch), axis =0).transpose()
         # Generator tries to fool the discriminator, thus targets are 1.
     batch_gen_y = np.ones([batch_size])
     """
@@ -203,14 +208,21 @@ with tf.Session() as sess:
         epoch_x = data[sample,:]
         epoch_x = np.reshape(epoch_x, newshape=[-1, 27998, 1])
         z = np.random.uniform(-1.0, 1.0, size=[batch_size, vector_dim])
-        #batch_disc_y = np.concatenate(
-        #    [np.ones([batch_size]), np.zeros([batch_size])-1], axis=0)
+        """
+        batch_disc_y = np.concatenate(
+            [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
         # Generator tries to fool the discriminator, thus targets are 1.
-        #batch_gen_y = np.ones([batch_size])
+        batch_gen_y = np.ones([batch_size])
+        """
+        batch_disc_y = np.concatenate(
+            [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
+        batch =np.flip(batch_disc_y,axis =0)
+        batch_disc_y = np.stack((batch_disc_y,batch), axis =0).transpose()
+        batch_gen_y = np.stack((np.ones([batch_size]),np.zeros([batch_size])), axis =0).transpose()
         #print(batch_disc_y.shape, "batch")
         # Training
-        feed_dict = {real_image_input: epoch_x, random_vector: z}
-        #             disc_target: batch_disc_y, gen_target: batch_gen_y}
+        feed_dict = {real_image_input: epoch_x, random_vector: z,
+                     disc_target: batch_disc_y, gen_target: batch_gen_y}
         _, _, gl, dl = sess.run([train_gen, train_disc, gen_loss, disc_loss],
                                 feed_dict=feed_dict)
         if i % 100 == 0 or i == 1:
@@ -226,6 +238,7 @@ with tf.Session() as sess:
     sample = np.random.randint(n_samp, size=batch_size)
     epoch_x = data[sample,:]
     epoch_x = np.reshape(epoch_x, newshape=[-1, 27998, 1])
+    print(epoch_x.shape)
     z = np.random.uniform(-1., 1., size=[100, vector_dim])
     samp = sess.run(gen_sample, feed_dict={random_vector: z})
     g = sess.run(disc_real, feed_dict={real_image_input: epoch_x})
