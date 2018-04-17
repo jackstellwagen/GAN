@@ -10,6 +10,7 @@ import time
 #data = np.load("/Users/Jack/Desktop/neuraldev/AdCo/matrix_GAN_2D.npy")
 #data = np.load("/home/jack/caltech_research/neuraldev/GAN_data.npy")
 data = np.load("/home/jack/caltech_research/neuraldev/GAN_data_normalized_-1to1.npy")
+#data = np.load("/home/jack/caltech_research/neuraldev/fake_GAN_data.npy")
 #data = data.tolist().toarray()
 data = data.transpose()
 
@@ -26,20 +27,36 @@ def generator(x, reuse=False):
         x = tf.nn.tanh(x)
         x = tf.reshape(x, shape=[-1, 332, 1, 64])
 
-
+        
         conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv1 = tf.nn.tanh(conv1)
 
         conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())#, padding="same")
+        conv2 = tf.nn.tanh(conv2)
 
         conv3 = tf.layers.conv2d_transpose(conv2, 16, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())#, padding="same")
+        conv3 = tf.nn.tanh(conv3)
 
         conv4 = tf.layers.conv2d_transpose(conv3, 4, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
+        conv4 = tf.nn.tanh(conv4)
 
         conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
         conv5 = tf.nn.tanh(conv5)
+        """
+        conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[2,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding = "same")
+
+        conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[2,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="same")
+
+        conv3 = tf.layers.conv2d_transpose(conv2, 16, [30,1], strides=[2,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="same")
+
+        conv4 = tf.layers.conv2d_transpose(conv3, 4, [30,1], strides=[2,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="same")
+
+        conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="same")
+        conv5 = tf.nn.tanh(conv5)
+        """
         #conv5 = tf.nn.sigmoid(conv5)
         conv5 = tf.squeeze(conv5, axis = 2)
-        print(conv5.get_shape())
+        #print(conv5.get_shape())
         #print(conv1.get_shape())
         """
         print(conv1.get_shape(), 'o1')
@@ -47,8 +64,8 @@ def generator(x, reuse=False):
         print(conv3.get_shape(), 'o3')
         print(conv4.get_shape(), 'o4')
         print(conv5.get_shape(), 'o5')
-
         """
+       
         return conv5
 
         """
@@ -92,9 +109,9 @@ def discriminator(x, reuse=False):
         dense1 = tf.nn.tanh(dense1)
         dense2 = tf.layers.dense(dense1, 512,kernel_initializer = tf.contrib.layers.xavier_initializer())
         dense2 = tf.nn.tanh(dense2)
-        dense3 = tf.layers.dense(dense2, 1,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        dense3 = tf.layers.dense(dense2, 2,kernel_initializer = tf.contrib.layers.xavier_initializer())
         #dense3 = tf.nn.tanh(dense3)
-        dense3 = tf.nn.sigmoid(dense3)
+        #dense3 = tf.nn.sigmoid(dense3)
     return dense3
 """
         print(x.get_shape(),"xshape")
@@ -156,18 +173,20 @@ gan_model = discriminator(gen_sample,reuse=True)
 
 #gen_target = tf.placeholder(tf.float32, shape=[None,2])
 #disc_target = tf.placeholder(tf.float32, shape=[None,2])
-gen_target = tf.placeholder(tf.float32, shape=[None])
-disc_target = tf.placeholder(tf.float32, shape=[None])
+gen_target = tf.placeholder(tf.int32, shape=[None])
+disc_target = tf.placeholder(tf.int32, shape=[None])
 """
 disc_target = np.concatenate(
             [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
 gen_target = np.ones([batch_size]) 
 """
+disc_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+    logits=disc_concat, labels=disc_target))
+gen_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+logits=gan_model, labels=gen_target))
+#disc_loss = tf.reduce_mean(tf.pow(disc_concat-disc_target,2))
 
-disc_loss = tf.reduce_mean(tf.pow(disc_concat-disc_target,2))
-
-#gen_loss = tf.reduce_mean(tf.pow(gan_model-gen_target,2))
-gen_loss = tf.reduce_mean(tf.negative(tf.log(gan_model)))
+#gen_loss = tf.reduce_mean(tf.negative(tf.log(gan_model)))
 
 
 #disc_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -179,9 +198,10 @@ gen_loss = tf.reduce_mean(tf.negative(tf.log(gan_model)))
 optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.001)
 optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.001)
 
-
-gen_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator')
-disc_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator')
+with tf.device("/device:GPU:1"):
+	gen_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator')
+with tf.device("/device:GPU:0"):
+	disc_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator')
 #print(gen_vars, "gen_vars")
 #print(type(gen_vars),"gen_vars type")
 #print(disc_vars, "disc_vars")
