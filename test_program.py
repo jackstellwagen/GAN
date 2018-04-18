@@ -92,31 +92,33 @@ def generator(x, reuse=False):
 
 def discriminator(x, reuse=False):
     with tf.variable_scope('Discriminator', reuse=reuse):
-        """
+        
         # Typical convolutional neural network to classify images.
         #print(x.get_shape(),'i')
         #conv1 = conv1d()
-        conv1 = tf.layers.conv1d(x,4, 30,stride=2, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv1 = tf.layers.conv1d(x,4, 30,strides=2, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
         #conv1 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv1))
         conv1 = tf.nn.leaky_relu(conv1)
-        conv2 = tf.layers.conv1d(conv1, 16, 30,stride =2,padding = "Same", kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv2 = tf.layers.conv1d(conv1, 16, 30,strides =2,padding = "Same", kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv2 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv2))
-        conv3 = tf.layers.conv1d(conv2, 32, 30,stride =2, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv3 = tf.layers.conv1d(conv2, 32, 30,strides =2, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3))
-        conv4 = tf.layers.conv1d(conv3, 64, 30,stride =2, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer())
+        conv4 = tf.layers.conv1d(conv3, 64, 30,strides =2, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer())
         conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
         flatten = tf.contrib.layers.flatten(conv4)
-        dense1 = tf.layers.dense(flatten, 2,kernel_initializer = tf.contrib.layers.xavier_initializer())
-        out = tf.nn.sigmoid(dense1)
-        #dense1 = tf.contrib.layers.batch_norm(dense1)
-        #dense1 = tf.nn.leaky_relu(dense1)
-        #dense2 = tf.layers.dense(dense1, 512,kernel_initializer = tf.contrib.layers.xavier_initializer())
-        #dense2 = tf.contrib.layers.batch_norm(dense2)
-        #dense2 = tf.nn.leaky_relu(dense2)
-        #dense3 = tf.layers.dense(dense2, 2,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        dense1 = tf.layers.dense(flatten, 2048,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        print(dense1.get_shape(), "out")
+        #out = tf.nn.sigmoid(dense1)
+        dense1 = tf.contrib.layers.batch_norm(dense1)
+        dense1 = tf.nn.leaky_relu(dense1)
+        dense2 = tf.layers.dense(dense1, 512,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        dense2 = tf.contrib.layers.batch_norm(dense2)
+        dense2 = tf.nn.leaky_relu(dense2)
+        dense3 = tf.layers.dense(dense2, 1,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        out = tf.nn.sigmoid(dense3)
         #dense3 = tf.contrib.layers.batch_norm(dense3)
         #dense3 = tf.nn.sigmoid(dense3)
-        return out, dense1
+        return out,dense3
         """
         conv1 = tf.layers.conv1d(x,8, 30, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv1 = tf.nn.tanh(conv1)
@@ -138,8 +140,9 @@ def discriminator(x, reuse=False):
         dense3 = tf.layers.dense(dense2, 2,kernel_initializer = tf.contrib.layers.xavier_initializer())
         #dense3 = tf.nn.tanh(dense3)
         dense3 = tf.nn.sigmoid(dense3)
-    return dense3
-"""
+        return dense3
+        """
+        """
         print(x.get_shape(),"xshape")
         print(conv1.get_shape(),'conv1')
         print(conv1_pool.get_shape(), "pool1")
@@ -190,36 +193,28 @@ real_image_input = tf.placeholder(tf.float32, shape=[None,27998, 1])
 
 gen_sample = generator(random_vector)
 
-disc_real = discriminator(real_image_input)
-disc_fake = discriminator(gen_sample, reuse=True)
-disc_concat = tf.concat([disc_real,disc_fake],axis=0)
-print(disc_concat.get_shape(),'concat')
+disc_real,disc_real_logits = discriminator(real_image_input)
+disc_fake,disc_fake_logits = discriminator(gen_sample, reuse=True)
+
+#disc_real = discriminator(real_image_input)
+#disc_fake = discriminator(gen_sample, reuse=True)
+#disc_concat = tf.concat([disc_real,disc_fake],axis=0)
+#print(disc_concat.get_shape(),'concat')
 
 gan_model = discriminator(gen_sample,reuse=True)
 
 #gen_target = tf.placeholder(tf.float32, shape=[None,2])
 #disc_target = tf.placeholder(tf.float32, shape=[None,2])
-gen_target = tf.placeholder(tf.int32, shape=[None])
-disc_target = tf.placeholder(tf.int32, shape=[None])
-"""
-disc_target = np.concatenate(
-            [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
-gen_target = np.ones([batch_size]) 
-"""
-disc_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-    logits=disc_concat, labels=disc_target))
-gen_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-logits=gan_model, labels=gen_target))
-#disc_loss = tf.reduce_mean(tf.pow(disc_concat-disc_target,2))
+#gen_target = tf.placeholder(tf.int32, shape=[None])
+#disc_target = tf.placeholder(tf.int32, shape=[None])
+disc_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+    logits=disc_real_logits, labels=tf.ones([batch_size, 1])))
+disc_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+    logits=disc_fake_logits, labels=tf.zeros([batch_size, 1])))
+disc_loss = disc_loss_real + disc_loss_fake
+gen_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+logits=disc_fake_logits, labels=tf.ones([batch_size, 1])))
 
-#gen_loss = tf.reduce_mean(tf.negative(tf.log(gan_model)))
-
-
-#disc_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-#    logits=disc_concat, labels=disc_target))
-
-#gen_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-#    logits=gan_model, labels=gen_target))
 
 optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.001)
 optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.001)
@@ -227,10 +222,6 @@ optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.001)
 
 gen_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator')
 disc_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator')
-#print(gen_vars, "gen_vars")
-#print(type(gen_vars),"gen_vars type")
-#print(disc_vars, "disc_vars")
-#print(type(disc_vars),"disc_vars type")
 
 train_gen = optimizer_gen.minimize(gen_loss, var_list=gen_vars)
 #train_gen = optimizer_gen.maximize(gen_loss, var_list=gen_vars)
@@ -246,35 +237,19 @@ saver = tf.train.Saver()
 with tf.Session() as sess:
     start = time.time()
     sess.run(init)
-    """
-    batch_disc_y = np.concatenate(
-            [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
-    #batch =np.flip(batch_disc_y,axis =0)
-    #batch_disc_y = np.stack((batch_disc_y,batch), axis =0).transpose()
-        # Generator tries to fool the discriminator, thus targets are 1.
-    batch_gen_y = np.ones([batch_size])
-    """
     for i in range(1, num_steps+1):
         sample = np.random.randint(n_samp, size=batch_size)
         epoch_x = data[sample,:]
         epoch_x = np.reshape(epoch_x, newshape=[-1, 27998, 1])
         z = np.random.uniform(-1.0, 1.0, size=[batch_size, vector_dim])
-        """
-        batch_disc_y = np.concatenate(
-            [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
-        batch =np.flip(batch_disc_y,axis =0)
-        batch_disc_y = np.stack((batch_disc_y,batch), axis =0).transpose()
-        batch_gen_y = np.stack((np.ones([batch_size]),np.zeros([batch_size])), axis =0).transpose()
-        """
-        batch_disc_y = np.concatenate(
-            [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
-        batch_gen_y = np.ones([batch_size])
-        #print(batch_disc_y.shape, "batch")
         # Training
-        feed_dict = {real_image_input: epoch_x, random_vector: z,
-                     disc_target: batch_disc_y, gen_target: batch_gen_y}
-        _, _, gl, dl = sess.run([train_gen, train_disc, gen_loss, disc_loss],
-                                feed_dict=feed_dict)
+        dl,_ = sess.run([disc_loss,train_disc], feed_dict = {real_image_input:epoch_x, random_vector:z})
+ 
+        gl, _ = sess.run([gen_loss,train_gen], feed_dict = {random_vector:z})
+        #feed_dict = {real_image_input: epoch_x, random_vector: z,
+        #             disc_target: batch_disc_y, gen_target: batch_gen_y}
+        #_, _, gl, dl = sess.run([train_gen, train_disc, gen_loss, disc_loss],
+        #                        feed_dict=feed_dict)
         if i % 100 == 0 or i == 1:
             print('Step %i: Generator Loss: %f, Discriminator Loss: %f' % (i, gl, dl))
     save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
