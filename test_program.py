@@ -15,7 +15,7 @@ data = np.load("/home/jack/caltech_research/neuraldev/fake_GAN_data.npy")
 #data = data.transpose()
 
 batch_size = 40
-num_steps = 200
+num_steps = 300
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -110,27 +110,26 @@ def generator(x, isTrain=True,reuse=False):
 def discriminator(x,isTrain=True, reuse=False):
     with tf.variable_scope('Discriminator', reuse=reuse):
         
-        # Typical convolutional neural network to classify images.
         #print(x.get_shape(),'i')
         #conv1 = conv1d()
         conv1 = tf.layers.conv1d(x,4, 30,strides=3, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv1 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv1))
         #conv1 = tf.nn.leaky_relu(conv1)
-        conv2 = tf.layers.conv1d(conv1, 16, 30,strides =3,padding = "Same", kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv2 = tf.layers.conv1d(conv1, 16, 30,strides =2,padding = "Same", kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv2 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv2))
-        conv3 = tf.layers.conv1d(conv2, 32, 30,strides =3, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv3 = tf.layers.conv1d(conv2, 32, 30,strides =2, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3))
-        conv4 = tf.layers.conv1d(conv3, 64, 30,strides =3, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer())
+        conv4 = tf.layers.conv1d(conv3, 64, 30,strides =2, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer())
         conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
         conv4 = tf.nn.leaky_relu(conv4)
         print(conv4.get_shape(),"conv4")
-        conv5 = tf.layers.conv1d(conv4, 1,346, strides = 1,padding ="valid")
-        print(conv5.get_shape(), "conv5")
-        out = tf.nn.sigmoid(conv5)
-        #flatten = tf.contrib.layers.flatten(conv4)
-        #dense1 = tf.layers.dense(flatten, 2048,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        #conv5 = tf.layers.conv1d(conv4, 1,1167, strides = 1,padding ="valid")
+        #print(conv5.get_shape(), "conv5")
+        #out = tf.nn.sigmoid(conv5)
+        flatten = tf.contrib.layers.flatten(conv4)
+        dense1 = tf.layers.dense(flatten, 1,kernel_initializer = tf.contrib.layers.xavier_initializer())
         #print(dense1.get_shape(), "out")
-        #out = tf.nn.sigmoid(dense1)
+        out = tf.nn.sigmoid(dense1)
         #dense1 = tf.contrib.layers.batch_norm(dense1)
         #dense1 = tf.nn.leaky_relu(dense1)
         #dense2 = tf.layers.dense(dense1, 512,kernel_initializer = tf.contrib.layers.xavier_initializer())
@@ -141,7 +140,7 @@ def discriminator(x,isTrain=True, reuse=False):
         #dense3 = tf.contrib.layers.batch_norm(dense3)
         #dense3 = tf.nn.sigmoid(dense3)
         #return dense3
-        return out,conv5
+        return out,dense1
         """
         conv1 = tf.layers.conv1d(x,8, 30, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv1 = tf.nn.tanh(conv1)
@@ -238,20 +237,20 @@ gen_target = tf.placeholder(tf.int32, shape=[None])
 disc_target = tf.placeholder(tf.int32, shape=[None])
 
 disc_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-    logits=disc_real_logits, labels=tf.ones([batch_size, 1,1])))
+    logits=disc_real_logits, labels=tf.ones([batch_size,1])))
 disc_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-    logits=disc_fake_logits, labels=tf.zeros([batch_size, 1,1])))
+    logits=disc_fake_logits, labels=tf.zeros([batch_size,1])))
 disc_loss = disc_loss_real + disc_loss_fake
 gen_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-    logits=disc_fake_logits, labels=tf.ones([batch_size,1,1])))
+    logits=disc_fake_logits, labels=tf.ones([batch_size,1])))
 """
 disc_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
     logits=disc_concat, labels=disc_target))
 gen_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
     logits=gan_model, labels=gen_target))
 """
-optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.001)
-optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.001)
+optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.002, beta1=0.5)
+optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.002, beta1= 0.5)
 
 
 gen_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator')
