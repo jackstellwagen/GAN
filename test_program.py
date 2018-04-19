@@ -15,7 +15,7 @@ data = np.load("/home/jack/caltech_research/neuraldev/fake_GAN_data.npy")
 #data = data.transpose()
 
 batch_size = 30
-num_steps = 900
+num_steps = 4000
 vector_dim = 200
 tf.reset_default_graph()
 
