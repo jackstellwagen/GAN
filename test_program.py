@@ -28,49 +28,49 @@ def lrelu(x, th=0.2):
 
 def generator(x, isTrain=True,reuse=False):
     with tf.variable_scope('Generator', reuse=reuse):
-        x = tf.layers.dense(x, units= 345 * 1 * 128,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        x = tf.layers.dense(x, units= 345 * 1 * 128,kernel_initializer = tf.truncated_normal_initializer())
         x =tf.layers.batch_normalization(x)
         x = tf.nn.leaky_relu(x)
         x = tf.reshape(x, shape=[-1, 345, 1, 128])
-        
-        conv1 = tf.layers.conv2d_transpose(x, 128, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer(),padding ="same")
+
+        conv1 = tf.layers.conv2d_transpose(x, 128, [30,1], strides=[3,1],kernel_initializer = tf.truncated_normal_initializer(),padding ="same")
         conv1 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv1))
         #conv1 = tf.nn.tanh(conv1)
         #conv1 = lrelu(tf.layers.batch_normalization(conv1),0.2)
 
-        conv2 = tf.layers.conv2d_transpose(conv1, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="same")
+        conv2 = tf.layers.conv2d_transpose(conv1, 64, [30,1], strides=[3,1],kernel_initializer = tf.truncated_normal_initializer(), padding="same")
         conv2 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv2))
         #conv2 = tf.nn.tanh(conv2)
         #conv2 = lrelu(tf.layers.batch_normalization(conv2),0.2)
 
-        conv3 = tf.layers.conv2d_transpose(conv2, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="same")
+        conv3 = tf.layers.conv2d_transpose(conv2, 32, [30,1], strides=[3,1],kernel_initializer = tf.truncated_normal_initializer(), padding="same")
         conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3))
         #conv3 = tf.nn.tanh(conv3)
         #conv3 = lrelu(tf.layers.batch_normalization(conv3),0.2)
 
-        conv4 = tf.layers.conv2d_transpose(conv3, 8, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="same")
+        conv4 = tf.layers.conv2d_transpose(conv3, 8, [30,1], strides=[3,1],kernel_initializer = tf.truncated_normal_initializer(), padding="same")
         conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
         #conv4 = tf.nn.tanh(conv4)
         #conv4 = lrelu(tf.layers.batch_normalization(conv4),0.2)
-  
+
         #conv4 = tf.layers.batch_normalization(conv4)
         #conv4 = tf.nn.tanh(conv4)
-        conv5 = tf.layers.conv2d_transpose(conv4, 1, [54,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="valid")
+        conv5 = tf.layers.conv2d_transpose(conv4, 1, [54,1], strides=[1,1],kernel_initializer = tf.truncated_normal_initializer(), padding="valid")
         #conv5 = tf.layers.batch_normalization(conv5)
         conv5 = tf.nn.tanh(conv5)
         print(conv5.get_shape(),"shape")
         #conv5 = tf.squeeze(conv5, axis = 2)
         #return conv5
         """
-        conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.truncated_normal_initializer())
 
-        conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())#, padding="same")
+        conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1],kernel_initializer = tf.truncated_normal_initializer())#, padding="same")
 
-        conv3 = tf.layers.conv2d_transpose(conv2, 16, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())#, padding="same")
+        conv3 = tf.layers.conv2d_transpose(conv2, 16, [30,1], strides=[3,1],kernel_initializer = tf.truncated_normal_initializer())#, padding="same")
 
-        conv4 = tf.layers.conv2d_transpose(conv3, 4, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
+        conv4 = tf.layers.conv2d_transpose(conv3, 4, [30,1], strides=[3,1],kernel_initializer = tf.truncated_normal_initializer())# padding="same")
 
-        conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
+        conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1],kernel_initializer = tf.truncated_normal_initializer())# padding="same")
         conv5 = tf.nn.tanh(conv5)
         """
         #conv5 = tf.nn.sigmoid(conv5)
@@ -109,18 +109,18 @@ def generator(x, isTrain=True,reuse=False):
 
 def discriminator(x,isTrain=True, reuse=False):
     with tf.variable_scope('Discriminator', reuse=reuse):
-        
+
         # Typical convolutional neural network to classify images.
         #print(x.get_shape(),'i')
         #conv1 = conv1d()
-        conv1 = tf.layers.conv1d(x,4, 30,strides=3, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv1 = tf.layers.conv1d(x,4, 30,strides=3, padding = "Same",kernel_initializer = tf.truncated_normal_initializer())
         conv1 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv1))
         #conv1 = tf.nn.leaky_relu(conv1)
-        conv2 = tf.layers.conv1d(conv1, 16, 30,strides =3,padding = "Same", kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv2 = tf.layers.conv1d(conv1, 16, 30,strides =3,padding = "Same", kernel_initializer = tf.truncated_normal_initializer())
         conv2 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv2))
-        conv3 = tf.layers.conv1d(conv2, 32, 30,strides =3, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv3 = tf.layers.conv1d(conv2, 32, 30,strides =3, padding = "Same",kernel_initializer = tf.truncated_normal_initializer())
         conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3))
-        conv4 = tf.layers.conv1d(conv3, 64, 30,strides =3, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer())
+        conv4 = tf.layers.conv1d(conv3, 64, 30,strides =3, padding = "Same",kernel_initializer =tf.truncated_normal_initializer())
         conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
         conv4 = tf.nn.leaky_relu(conv4)
         print(conv4.get_shape(),"conv4")
@@ -165,7 +165,7 @@ def discriminator(x,isTrain=True, reuse=False):
         dense3 = tf.nn.sigmoid(dense3)
         return dense3
         """
-        
+
         print(x.get_shape(),"xshape")
         print(conv1.get_shape(),'conv1')
         #print(conv1_pool.get_shape(), "pool1")
@@ -307,7 +307,7 @@ with tf.Session() as sess:
     g = sess.run(disc_real, feed_dict={real_image_input: epoch_x})
     o = sess.run(disc_real, feed_dict={real_image_input: samp})
     #o = epoch_x
-    np.save("disc_output_fake.npy",o)    
+    np.save("disc_output_fake.npy",o)
     np.save("disc_output.npy", g)
     np.save("generator_output.npy", samp)
 #     # Generate images from noise, using the generator network.
