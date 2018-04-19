@@ -250,8 +250,8 @@ disc_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
 gen_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
     logits=gan_model, labels=gen_target))
 """
-optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.002)
-optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.002)
+optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.001)
+optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.001)
 
 
 gen_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator')
