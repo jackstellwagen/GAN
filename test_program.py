@@ -4,57 +4,78 @@ import tensorflow as tf
 import scipy.io
 import scipy
 import time
-
+from fake_data_func import gen_fake_data
 
 #data = np.load("/Users/Jack/Desktop/neuraldev/AdCo/matrix_GAN_2D.npy")
 #data = np.load("/home/jack/caltech_research/neuraldev/GAN_data.npy")
 #data = np.load("/home/jack/caltech_research/neuraldev/GAN_data_normalized_-1to1.npy")
-data = np.load("/home/jack/caltech_research/neuraldev/fake_GAN_data.npy")
+#data = np.load("/home/jack/caltech_research/neuraldev/fake_GAN_data.npy")
+#data = gen_fake_data()
 #data = data.tolist().toarray()
 #data = data.transpose()
 
+test_data = np.random.normal(loc=-0.1,scale=0.4,size=(100,27998,1))
+
+
 batch_size = 30
-num_steps = 4000
+num_steps = 900
 vector_dim = 200
 tf.reset_default_graph()
 
-print(data.shape)
+#print(data.shape)
+
+#n_samp, n_input = data.shape
+
+def noise_array():
+    return np.random.normal(scale = 0.1, size =(500,27998))
+
+
+perfect_data = np.zeros(shape=(500,27998))
+perfect_data[:,8000:16000] = 0.7
+perfect_data[:,16000:] = -0.7
+
+data = perfect_data + noise_array()
+
+print(data[:,:8000].mean(),"0-8000")
+print(data[:,8000:16000].mean(),"8000-16000")
+print(data[:,16000:].mean(),"16000-")
 
 n_samp, n_input = data.shape
+print(data.shape)
 
-def lrelu(x, th=0.2):
-    return tf.maximum(th * x, x)
+
+
 
 def generator(x, isTrain=True,reuse=False):
     with tf.variable_scope('Generator', reuse=reuse):
-        x = tf.layers.dense(x, units= 345 * 1 * 128,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        x = tf.layers.dense(x, units= 345 * 1 * 128,kernel_initializer =tf.contrib.layers.xavier_initializer())
         x =tf.layers.batch_normalization(x)
         x = tf.nn.leaky_relu(x)
         x = tf.reshape(x, shape=[-1, 345, 1, 128])
         
-        conv1 = tf.layers.conv2d_transpose(x, 128, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer(),padding ="same")
+        conv1 = tf.layers.conv2d_transpose(x, 128, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),padding ="same")
         conv1 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv1))
         #conv1 = tf.nn.tanh(conv1)
         #conv1 = lrelu(tf.layers.batch_normalization(conv1),0.2)
 
-        conv2 = tf.layers.conv2d_transpose(conv1, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="same")
+        conv2 = tf.layers.conv2d_transpose(conv1, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(), padding="same")
         conv2 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv2))
         #conv2 = tf.nn.tanh(conv2)
         #conv2 = lrelu(tf.layers.batch_normalization(conv2),0.2)
 
-        conv3 = tf.layers.conv2d_transpose(conv2, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="same")
+        conv3 = tf.layers.conv2d_transpose(conv2, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(), padding="same")
         conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3))
         #conv3 = tf.nn.tanh(conv3)
         #conv3 = lrelu(tf.layers.batch_normalization(conv3),0.2)
 
-        conv4 = tf.layers.conv2d_transpose(conv3, 8, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="same")
+        conv4 = tf.layers.conv2d_transpose(conv3, 8, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(), padding="same")
         conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
         #conv4 = tf.nn.tanh(conv4)
         #conv4 = lrelu(tf.layers.batch_normalization(conv4),0.2)
   
         #conv4 = tf.layers.batch_normalization(conv4)
         #conv4 = tf.nn.tanh(conv4)
-        conv5 = tf.layers.conv2d_transpose(conv4, 1, [54,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding="valid")
+        conv5 = tf.layers.conv2d_transpose(conv4, 1, [54,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(), padding="valid")
         #conv5 = tf.layers.batch_normalization(conv5)
         conv5 = tf.nn.tanh(conv5)
         print(conv5.get_shape(),"shape")
@@ -106,18 +127,18 @@ def discriminator(x,isTrain=True, reuse=False):
         
         #print(x.get_shape(),'i')
         #conv1 = conv1d()
-        conv1 = tf.layers.conv1d(x,4, 30,strides=3, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv1 = tf.layers.conv1d(x,4, 30,strides=3, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())
         conv1 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv1))
         #conv1 = tf.nn.leaky_relu(conv1)
-        conv2 = tf.layers.conv1d(conv1, 16, 30,strides =2,padding = "Same", kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv2 = tf.layers.conv1d(conv1, 16, 30,strides =2,padding = "Same", kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())
         conv2 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv2))
-        conv3 = tf.layers.conv1d(conv2, 32, 30,strides =2, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv3 = tf.layers.conv1d(conv2, 32, 30,strides =2, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())
         conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3))
-        conv4 = tf.layers.conv1d(conv3, 64, 30,strides =2, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer())
+        conv4 = tf.layers.conv1d(conv3, 64, 30,strides =2, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
         conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
         conv4 = tf.nn.leaky_relu(conv4)
         print(conv4.get_shape(),"conv4")
-        #conv5 = tf.layers.conv1d(conv4, 1,1167, strides = 1,padding ="valid")
+        #conv5 = tf.layers.conv1d(conv4, 1,1167, strides = 1,padding ="valid",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
         #print(conv5.get_shape(), "conv5")
         #out = tf.nn.sigmoid(conv5)
         flatten = tf.contrib.layers.flatten(conv4)
@@ -258,25 +279,35 @@ train_disc = optimizer_disc.minimize(disc_loss, var_list=disc_vars)
 
 init = tf.global_variables_initializer()
 
-
+						
 saver = tf.train.Saver()
 with tf.Session() as sess:
     start = time.time()
     sess.run(init)
+    dl = 1
     for i in range(1, num_steps+1):
+        if i% 100 == 0:# and i!=500:
+            #print("New Data")
+            data = gen_fake_data()
+        #if i ==500:
+        #    data = test_data
         sample = np.random.randint(n_samp, size=batch_size)
         epoch_x = data[sample,:]
         epoch_x = np.reshape(epoch_x, newshape=[-1, 27998, 1])
         z = np.random.uniform(-1.0, 1.0, size=[batch_size, vector_dim])
-        """
-        batch_disc_y = np.concatenate(
-            [np.ones([batch_size]), np.zeros([batch_size])], axis=0)
-        batch_gen_y = np.ones([batch_size])
-        """
         # Training
+        #if dl < 0.001:
+            #print("start")
+            #concat = np.concatenate((epoch_x,test_data), axis=0)
+            #g = sess.run(disc_real, feed_dict={real_image_input: concat})
+            #np.save("disc_output.npy", g)
+            #print("done")
+        #if i<50 or i % 25 == 0:# or i>400:
         dl,_ = sess.run([disc_loss,train_disc], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
         gl, _ = sess.run([gen_loss,train_gen], feed_dict = {random_vector:z,isTrain:True})
 
+        #if dl<0.00001:
+        #   break
         #feed_dict = {real_image_input: epoch_x, random_vector: z,
         #             disc_target: batch_disc_y, gen_target: batch_gen_y, isTrain:True}
         #_, _, gl, dl = sess.run([train_gen, train_disc, gen_loss, disc_loss],
@@ -300,33 +331,6 @@ with tf.Session() as sess:
     g = sess.run(disc_real, feed_dict={real_image_input: epoch_x})
     o = sess.run(disc_real, feed_dict={real_image_input: samp})
     #o = epoch_x
-    np.save("disc_output_fake.npy",o)    
-    np.save("disc_output.npy", g)
+    #np.save("disc_output_fake.npy",o)    
+    #np.save("disc_output.npy", g)
     np.save("generator_output.npy", samp)
-#     # Generate images from noise, using the generator network.
-#     f, a = plt.subplots(4, 6, figsize=(6, 4))
-#     for i in range(6):
-#         # Noise input.
-#         z = np.random.uniform(-1., 1., size=[4, vector_dim])
-#         g = sess.run(gen_sample, feed_dict={random_vector: z})
-#         for j in range(4):
-#             # Generate image from noise. Extend to 3 channels for matplot figure.
-#             img = np.reshape(np.repeat(g[j][:, :, np.newaxis], 3, axis=2),
-#                              newshape=(32, 83, 3))
-#             a[j][i].imshow(img)
-#
-#     f.show()
-#     plt.draw()
-# plt.waitforbuttonpress()
-
-"""
-def generator(x, reuse=True):
-    with tf.variable_scope('Generator', reuse=reuse):
-        x = tf.layers.dense(x, units=6 * 6 * 128)
-        x = tf.nn.tanh(x)
-        x = tf.reshape(x, shape=[-1, 6, 6, 128])
-        conv1 = tf.layers.conv2d_transpose(x, 64, 4, strides=2)
-        conv2 = tf.layers.conv2d_transpose(conv1, 1, 2, strides=2)
-        conv2 = tf.nn.sigmoid(conv2)
-        return conv2
-"""
