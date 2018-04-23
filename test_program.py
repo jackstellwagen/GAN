@@ -48,22 +48,22 @@ print(data.shape)
 
 def generator(x, isTrain=True,reuse=False):
     with tf.variable_scope('Generator', reuse=reuse):
-        x = tf.layers.dense(x, units= 345 * 1 * 128,kernel_initializer =tf.contrib.layers.xavier_initializer())
+        x = tf.layers.dense(x, units= 332 * 1 * 64,kernel_initializer =tf.contrib.layers.xavier_initializer())
         x =tf.layers.batch_normalization(x)
         x = tf.nn.leaky_relu(x)
-        x = tf.reshape(x, shape=[-1, 345, 1, 128])
-        
-        conv1 = tf.layers.conv2d_transpose(x, 128, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),padding ="same")
+        x = tf.reshape(x, shape=[-1, 332, 1, 64])
+        """        
+        conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),padding ="same")
         conv1 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv1))
         #conv1 = tf.nn.tanh(conv1)
         #conv1 = lrelu(tf.layers.batch_normalization(conv1),0.2)
 
-        conv2 = tf.layers.conv2d_transpose(conv1, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(), padding="same")
+        conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(), padding="same")
         conv2 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv2))
         #conv2 = tf.nn.tanh(conv2)
         #conv2 = lrelu(tf.layers.batch_normalization(conv2),0.2)
 
-        conv3 = tf.layers.conv2d_transpose(conv2, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(), padding="same")
+        conv3 = tf.layers.conv2d_transpose(conv2, 16, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(), padding="same")
         conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3))
         #conv3 = tf.nn.tanh(conv3)
         #conv3 = lrelu(tf.layers.batch_normalization(conv3),0.2)
@@ -83,44 +83,17 @@ def generator(x, isTrain=True,reuse=False):
         #return conv5
         """
         conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())
+        
         conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())#, padding="same")
         conv3 = tf.layers.conv2d_transpose(conv2, 16, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())#, padding="same")
         conv4 = tf.layers.conv2d_transpose(conv3, 4, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
         conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
         conv5 = tf.nn.tanh(conv5)
-        """
+        
         #conv5 = tf.nn.sigmoid(conv5)
         conv5 = tf.squeeze(conv5, axis = 2)
-        #conv4 = tf.squeeze(conv4, axis = 2)
-        #print(conv5.get_shape())
-        #print(conv1.get_shape())
-        """
-        print(conv1.get_shape(), 'o1')
-        print(conv2.get_shape(), 'o2')
-        print(conv3.get_shape(), 'o3')
-        print(conv4.get_shape(), 'o4')
-        print(conv5.get_shape(), 'o5')
-        """
+        print(conv5.get_shape(),"conv5")
         return conv5
-
-        """
-        x = tf.layers.dense(x, units=6 * 6 * 128)
-        #print(x.get_shape(), 'o')
-        x = tf.nn.tanh(x)
-        #print(x.get_shape())
-        x = tf.layers.dense(x, units=6 * 19 * 128)
-        #print(x.get_shape())
-        x = tf.nn.tanh(x)
-        x = tf.reshape(x, shape=[-1, 6, 19, 128])
-        #conv1 = tf.layers.conv2d_transpose(x, 64, 2, strides=2)
-        #print(conv1.get_shape())
-        conv1 = tf.layers.conv2d_transpose(x, 64, 4, strides=2) #(6,19)-->(14,40)
-        #print(conv1.get_shape())
-        conv2 = tf.layers.conv2d_transpose(conv1, 1, [6,5], strides=2) #(14,40)-->(32*83)
-        #print(conv2.get_shape())
-        #conv2 = tf.nn.sigmoid(conv2)
-        conv2 = tf.nn.relu(conv2)
-        """
 
 def discriminator(x,isTrain=True, reuse=False):
     with tf.variable_scope('Discriminator', reuse=reuse):
