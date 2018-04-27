@@ -118,7 +118,8 @@ def discriminator(x,isTrain=True, reuse=False):
         conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3))
         conv4 = tf.layers.conv1d(conv3, 64, 30,strides =2, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
         conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
-        conv4 = tf.nn.leaky_relu(conv4)
+        #conv4 = tf.nn.leaky_relu(conv4)
+        conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
         print(conv4.get_shape(),"conv4")
         #conv5 = tf.layers.conv1d(conv4, 1,1167, strides = 1,padding ="valid",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
         #print(conv5.get_shape(), "conv5")
@@ -234,12 +235,12 @@ gen_target = tf.placeholder(tf.int32, shape=[None])
 disc_target = tf.placeholder(tf.int32, shape=[None])
 
 disc_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-    logits=disc_real_logits, labels=tf.ones([batch_size,1])))
+    logits=disc_real_logits, labels=tf.ones_like(disc_real_logits)))
 disc_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-    logits=disc_fake_logits, labels=tf.zeros([batch_size,1])))
+    logits=disc_fake_logits, labels=tf.zeros_like(disc_fake_logits)))
 disc_loss = disc_loss_real + disc_loss_fake
 gen_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-    logits=disc_fake_logits, labels=tf.ones([batch_size,1])))
+    logits=disc_fake_logits, labels=tf.ones_like(disc_fake_logits)))
 """
 disc_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
     logits=disc_concat, labels=disc_target))
@@ -288,7 +289,7 @@ with tf.Session() as sess:
             #print("done")
         #if i<10 or i % 4 == 0:# or i>400:
         #if dl>gl:
-       	dl,_ = sess.run([disc_loss,train_disc], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
+       	dl,_,dlr,dlf = sess.run([disc_loss,train_disc,disc_loss_real, disc_loss_fake], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
         gl, _ = sess.run([gen_loss,train_gen], feed_dict = {random_vector:z,isTrain:True})
 
         #if dl<0.00001:
@@ -299,6 +300,7 @@ with tf.Session() as sess:
         #                        feed_dict=feed_dict)
         if i % 100 == 0 or i == 1:
             print('Step %i: Generator Loss: %f, Discriminator Loss: %f' % (i, gl, dl))
+            print("DLR:",dlr,",", "DLF:", dlf)
     save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
     finish = time.time() -start
     out = open("timing.txt",'w')
