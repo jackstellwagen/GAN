@@ -17,8 +17,8 @@ from fake_data_func import gen_fake_data
 test_data = np.random.normal(loc=-0.1,scale=0.4,size=(100,27998,1))
 
 
-batch_size = 30
-num_steps = 900
+batch_size = 35
+num_steps = 1500
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -36,6 +36,7 @@ perfect_data[:,16000:] = -0.7
 
 data = perfect_data + noise_array()
 
+#np.save("model_data.npy", data)
 print(data[:,:8000].mean(),"0-8000")
 print(data[:,8000:16000].mean(),"8000-16000")
 print(data[:,16000:].mean(),"16000-")
@@ -50,9 +51,9 @@ def generator(x, isTrain=True,reuse=False):
     with tf.variable_scope('Generator', reuse=reuse):
         x = tf.layers.dense(x, units= 332 * 1 * 64,kernel_initializer =tf.contrib.layers.xavier_initializer())
         x =tf.layers.batch_normalization(x)
-        x = tf.nn.leaky_relu(x)
+        x = tf.nn.relu(x)
         x = tf.reshape(x, shape=[-1, 332, 1, 64])
-        """        
+        """ 
         conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),padding ="same")
         conv1 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv1))
         #conv1 = tf.nn.tanh(conv1)
@@ -82,12 +83,20 @@ def generator(x, isTrain=True,reuse=False):
         #conv5 = tf.squeeze(conv5, axis = 2)
         #return conv5
         """
-        conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())
-        
-        conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())#, padding="same")
-        conv3 = tf.layers.conv2d_transpose(conv2, 16, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())#, padding="same")
-        conv4 = tf.layers.conv2d_transpose(conv3, 4, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
-        conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
+        conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())
+        conv1 =tf.layers.batch_normalization(conv1)
+
+        conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())#, padding="same")
+        conv2 =tf.layers.batch_normalization(conv2)
+
+        conv3 = tf.layers.conv2d_transpose(conv2, 16, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())#, padding="same")
+        conv3 =tf.layers.batch_normalization(conv3)
+
+        conv4 = tf.layers.conv2d_transpose(conv3, 4, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())# padding="same")
+        conv4 =tf.layers.batch_normalization(conv4)
+
+        conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())# padding="same")
+        conv5 =tf.layers.batch_normalization(conv5)
         conv5 = tf.nn.tanh(conv5)
         
         #conv5 = tf.nn.sigmoid(conv5)
@@ -258,10 +267,12 @@ with tf.Session() as sess:
     start = time.time()
     sess.run(init)
     dl = 1
+    gl = 1
     for i in range(1, num_steps+1):
-        if i% 100 == 0:# and i!=500:
+        if i% 50 == 0:# and i!=500:
             #print("New Data")
-            data = gen_fake_data()
+            #data = gen_fake_data()
+             data = perfect_data + noise_array()
         #if i ==500:
         #    data = test_data
         sample = np.random.randint(n_samp, size=batch_size)
@@ -275,8 +286,9 @@ with tf.Session() as sess:
             #g = sess.run(disc_real, feed_dict={real_image_input: concat})
             #np.save("disc_output.npy", g)
             #print("done")
-        #if i<50 or i % 25 == 0:# or i>400:
-        dl,_ = sess.run([disc_loss,train_disc], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
+        #if i<10 or i % 4 == 0:# or i>400:
+        #if dl>gl:
+       	dl,_ = sess.run([disc_loss,train_disc], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
         gl, _ = sess.run([gen_loss,train_gen], feed_dict = {random_vector:z,isTrain:True})
 
         #if dl<0.00001:
