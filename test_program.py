@@ -18,7 +18,7 @@ test_data = np.random.normal(loc=-0.1,scale=0.4,size=(100,27998,1))
 
 
 batch_size = 35
-num_steps = 1500
+num_steps = 3000
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -27,19 +27,37 @@ tf.reset_default_graph()
 #n_samp, n_input = data.shape
 
 def noise_array():
-    return np.random.normal(scale = 0.1, size =(500,27998))
+    return np.random.normal(scale = 0.05, size =(500,27998))
 
 
-perfect_data = np.zeros(shape=(500,27998))
+perfect_data = np.indices((500,27998))[1]
+sin = lambda t: np.sin(1/np.random.randint(100,1500) *t)
+data = np.apply_along_axis(sin, 1, perfect_data)
+
+#data = vfunc(perfect_data, np.random.randint(100,1500)
+#def data_func(perfect_data):
+
+
+
+#vfunc = np.vectorize(sin)
+
+#perfect_data = np.zeros(shape=(500,27998))
+"""
 perfect_data[:,8000:16000] = 0.7
 perfect_data[:,16000:] = -0.7
 
-data = perfect_data + noise_array()
+perfect_data[0:250,:12500] = 0.7
+perfect_data[250:, 12500:] = -0.2 
 
-#np.save("model_data.npy", data)
-print(data[:,:8000].mean(),"0-8000")
-print(data[:,8000:16000].mean(),"8000-16000")
-print(data[:,16000:].mean(),"16000-")
+sin_wave = np.zeros(shape=(27998))
+for i in range(len(sin_wave)):
+    sin_wave[i] = np.sin(i/1000)
+perfect_data[:,:] = sin_wave
+print(perfect_data.shape, "sin_wave")
+np.save("perfect_data.npy", perfect_data)    
+
+data = perfect_data + noise_array()
+"""
 
 n_samp, n_input = data.shape
 print(data.shape)
@@ -121,13 +139,13 @@ def discriminator(x,isTrain=True, reuse=False):
         #conv4 = tf.nn.leaky_relu(conv4)
         conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
         print(conv4.get_shape(),"conv4")
-        #conv5 = tf.layers.conv1d(conv4, 1,1167, strides = 1,padding ="valid",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
+        conv5 = tf.layers.conv1d(conv4, 1,1167, strides = 1,padding ="valid",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
         #print(conv5.get_shape(), "conv5")
-        #out = tf.nn.sigmoid(conv5)
-        flatten = tf.contrib.layers.flatten(conv4)
-        dense1 = tf.layers.dense(flatten, 1,kernel_initializer = tf.contrib.layers.xavier_initializer())
-        #print(dense1.get_shape(), "out")
-        out = tf.nn.sigmoid(dense1)
+        out = tf.nn.sigmoid(conv5)
+        #flatten = tf.contrib.layers.flatten(conv4)
+        #dense1 = tf.layers.dense(flatten, 1,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        #out = tf.nn.sigmoid(dense1)
+
         #dense1 = tf.contrib.layers.batch_norm(dense1)
         #dense1 = tf.nn.leaky_relu(dense1)
         #dense2 = tf.layers.dense(dense1, 512,kernel_initializer = tf.contrib.layers.xavier_initializer())
@@ -138,7 +156,8 @@ def discriminator(x,isTrain=True, reuse=False):
         #dense3 = tf.contrib.layers.batch_norm(dense3)
         #dense3 = tf.nn.sigmoid(dense3)
         #return dense3
-        return out,dense1
+        #return out,dense1
+        return out,conv5
         """
         conv1 = tf.layers.conv1d(x,8, 30, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv1 = tf.nn.tanh(conv1)
@@ -267,31 +286,38 @@ saver = tf.train.Saver()
 with tf.Session() as sess:
     start = time.time()
     sess.run(init)
-    dl = 1
-    gl = 1
+    #dl = 1
+    #gl = 1
     for i in range(1, num_steps+1):
         if i% 50 == 0:# and i!=500:
             #print("New Data")
             #data = gen_fake_data()
-             data = perfect_data + noise_array()
-        #if i ==500:
-        #    data = test_data
+             #data = perfect_data + noise_array()
+             data = np.apply_along_axis(sin, 1, perfect_data)
         sample = np.random.randint(n_samp, size=batch_size)
         epoch_x = data[sample,:]
         epoch_x = np.reshape(epoch_x, newshape=[-1, 27998, 1])
         z = np.random.uniform(-1.0, 1.0, size=[batch_size, vector_dim])
-        # Training
-        #if dl < 0.001:
-            #print("start")
-            #concat = np.concatenate((epoch_x,test_data), axis=0)
-            #g = sess.run(disc_real, feed_dict={real_image_input: concat})
-            #np.save("disc_output.npy", g)
-            #print("done")
-        #if i<10 or i % 4 == 0:# or i>400:
-        #if dl>gl:
        	dl,_,dlr,dlf = sess.run([disc_loss,train_disc,disc_loss_real, disc_loss_fake], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
         gl, _ = sess.run([gen_loss,train_gen], feed_dict = {random_vector:z,isTrain:True})
+        """
+        if i == 250:
+           real_data = perfect_data + noise_array()
+           epoch = real_data[sample,:]
+           epoch = np.reshape(epoch, newshape=[-1, 27998, 1])
+           out_disc = sess.run([disc_real], feed_dict = {real_image_input:epoch})
+           np.save("disc_out.npy", out_disc)
+         """
 
+        if dl <0.00001:
+           save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
+           print("done")
+           break
+           #real_data = perfect_data + noise_array()
+           epoch = real_data[sample,:]
+           epoch = np.reshape(epoch, newshape=[-1, 27998, 1])
+           out_disc = sess.run([disc_real], feed_dict = {real_image_input:epoch})
+           np.save("disc_out_0loss.npy", out_disc)
         #if dl<0.00001:
         #   break
         #feed_dict = {real_image_input: epoch_x, random_vector: z,
@@ -301,7 +327,7 @@ with tf.Session() as sess:
         if i % 100 == 0 or i == 1:
             print('Step %i: Generator Loss: %f, Discriminator Loss: %f' % (i, gl, dl))
             print("DLR:",dlr,",", "DLF:", dlf)
-    save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
+    #save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
     finish = time.time() -start
     out = open("timing.txt",'w')
     var = str(num_steps) + ':' + str(finish)
@@ -318,6 +344,6 @@ with tf.Session() as sess:
     g = sess.run(disc_real, feed_dict={real_image_input: epoch_x})
     o = sess.run(disc_real, feed_dict={real_image_input: samp})
     #o = epoch_x
-    #np.save("disc_output_fake.npy",o)    
-    #np.save("disc_output.npy", g)
+    np.save("disc_output_fake.npy",o)    
+    np.save("disc_output.npy", g)
     np.save("generator_output.npy", samp)
