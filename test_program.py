@@ -18,7 +18,7 @@ test_data = np.random.normal(loc=-0.1,scale=0.4,size=(100,27998,1))
 
 
 batch_size = 35
-num_steps = 3000
+num_steps = 4000
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -32,7 +32,12 @@ def noise_array():
 
 perfect_data = np.indices((500,27998))[1]
 sin = lambda t: np.sin(1/np.random.randint(100,1500) *t)
-data = np.apply_along_axis(sin, 1, perfect_data)
+data = np.apply_along_axis(sin, 1, perfect_data) + noise_array()
+
+
+noise = lambda t: np.random.normal(scale = 0.05) * t
+vfunc = np.vectorize(noise)
+#data = vfunc(data)
 
 #data = vfunc(perfect_data, np.random.randint(100,1500)
 #def data_func(perfect_data):
@@ -69,7 +74,7 @@ def generator(x, isTrain=True,reuse=False):
     with tf.variable_scope('Generator', reuse=reuse):
         x = tf.layers.dense(x, units= 332 * 1 * 64,kernel_initializer =tf.contrib.layers.xavier_initializer())
         x =tf.layers.batch_normalization(x)
-        x = tf.nn.relu(x)
+        x = tf.nn.leaky_relu(x)
         x = tf.reshape(x, shape=[-1, 332, 1, 64])
         """ 
         conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),padding ="same")
@@ -103,6 +108,7 @@ def generator(x, isTrain=True,reuse=False):
         """
         conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())
         conv1 =tf.layers.batch_normalization(conv1)
+        #conv1 = 
 
         conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())#, padding="same")
         conv2 =tf.layers.batch_normalization(conv2)
@@ -137,27 +143,28 @@ def discriminator(x,isTrain=True, reuse=False):
         conv4 = tf.layers.conv1d(conv3, 64, 30,strides =2, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
         conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
         #conv4 = tf.nn.leaky_relu(conv4)
-        conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
+        #conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4))
         print(conv4.get_shape(),"conv4")
-        conv5 = tf.layers.conv1d(conv4, 1,1167, strides = 1,padding ="valid",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
+        #conv5 = tf.layers.conv1d(conv4, 1,1167, strides = 1,padding ="valid",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
         #print(conv5.get_shape(), "conv5")
-        out = tf.nn.sigmoid(conv5)
-        #flatten = tf.contrib.layers.flatten(conv4)
-        #dense1 = tf.layers.dense(flatten, 1,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        #out = tf.nn.sigmoid(conv5)
+        flatten = tf.contrib.layers.flatten(conv4)
+        dense1 = tf.layers.dense(flatten, 2048,kernel_initializer = tf.contrib.layers.xavier_initializer())
         #out = tf.nn.sigmoid(dense1)
 
         #dense1 = tf.contrib.layers.batch_norm(dense1)
-        #dense1 = tf.nn.leaky_relu(dense1)
-        #dense2 = tf.layers.dense(dense1, 512,kernel_initializer = tf.contrib.layers.xavier_initializer())
-        #dense2 = tf.contrib.layers.batch_norm(dense2)
-        #dense2 = tf.nn.leaky_relu(dense2)
-        #dense3 = tf.layers.dense(dense2, 2,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        dense1 = tf.nn.leaky_relu(dense1)
+        dense2 = tf.layers.dense(dense1, 512,kernel_initializer = tf.contrib.layers.xavier_initializer())
+        dense2 = tf.contrib.layers.batch_norm(dense2)
+        dense2 = tf.nn.leaky_relu(dense2)
+        dense3 = tf.layers.dense(dense2, 1,kernel_initializer = tf.contrib.layers.xavier_initializer())
         #out = tf.nn.sigmoid(dense3)
         #dense3 = tf.contrib.layers.batch_norm(dense3)
+        out = tf.nn.sigmoid(dense3)
         #dense3 = tf.nn.sigmoid(dense3)
         #return dense3
-        #return out,dense1
-        return out,conv5
+        return out,dense3
+        #return out,conv5
         """
         conv1 = tf.layers.conv1d(x,8, 30, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer())
         conv1 = tf.nn.tanh(conv1)
@@ -293,7 +300,9 @@ with tf.Session() as sess:
             #print("New Data")
             #data = gen_fake_data()
              #data = perfect_data + noise_array()
-             data = np.apply_along_axis(sin, 1, perfect_data)
+             start = time.time()
+             data = np.apply_along_axis(sin, 1, perfect_data) + noise_array()
+             print(time.time()-start, "time")
         sample = np.random.randint(n_samp, size=batch_size)
         epoch_x = data[sample,:]
         epoch_x = np.reshape(epoch_x, newshape=[-1, 27998, 1])
@@ -327,7 +336,7 @@ with tf.Session() as sess:
         if i % 100 == 0 or i == 1:
             print('Step %i: Generator Loss: %f, Discriminator Loss: %f' % (i, gl, dl))
             print("DLR:",dlr,",", "DLF:", dlf)
-    #save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
+    save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
     finish = time.time() -start
     out = open("timing.txt",'w')
     var = str(num_steps) + ':' + str(finish)
