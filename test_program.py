@@ -18,7 +18,7 @@ import time
 
 
 batch_size = 35
-num_steps = 1200
+num_steps = 800
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -31,7 +31,7 @@ def noise_array():
 
 
 perfect_data = np.indices((500,27998))[1]
-sin = lambda t: np.sin(1/np.random.randint(400,1500) *t)
+sin = lambda t: np.sin(1/np.random.randint(100,1500) *t)
 data = np.apply_along_axis(sin, 1, perfect_data) + noise_array()
 
 
@@ -72,34 +72,45 @@ print(data.shape)
 
 def generator(x, isTrain=True,reuse=False, batch_size=batch_size):
     with tf.variable_scope('Generator', reuse=reuse):
-        x = tf.layers.dense(x, units= 345 * 64,kernel_initializer =tf.contrib.layers.xavier_initializer())
+        x = tf.layers.dense(x, units= 345 * 64,activation = tf.identity,kernel_initializer =tf.contrib.layers.xavier_initializer())
         #x = tf.identity(x)
         x = tf.reshape(x, shape=[-1, 345, 64])
-        x =tf.layers.batch_normalization(x)
+        x =tf.layers.batch_normalization(x,momentum=0.9, training =isTrain)
         x = tf.nn.relu(x)
         
-        wconv1 = tf.Variable(tf.random_normal([30,64,64]), name ="wconv1") 
+        wconv1 = tf.Variable(tf.truncated_normal([30,64,64]), name ="wconv1")
         conv1 = tf.contrib.nn.conv1d_transpose(x,wconv1,[batch_size,1035,64], stride=3,padding ="SAME")
-        conv1 = tf.nn.relu(tf.layers.batch_normalization(conv1))
+        bconv1 = tf.Variable(tf.zeros([64]), name ="bconv1")
+        conv1 = tf.nn.bias_add(conv1, bconv1)
+        conv1 = tf.nn.relu(tf.layers.batch_normalization(conv1,momentum=0.9, training =isTrain))
         print(conv1.get_shape(),"conv1")
         
-        wconv2 = tf.Variable(tf.random_normal([30,32,64]), name ="wconv2")
+        wconv2 = tf.Variable(tf.truncated_normal([30,32,64]), name ="wconv2")
         conv2 = tf.contrib.nn.conv1d_transpose(conv1, wconv2,[batch_size, 3105,32], stride=3, padding="SAME")
-        conv2 = tf.nn.relu(tf.layers.batch_normalization(conv2))
+        bconv2 = tf.Variable(tf.zeros([32]), name ="bconv2")
+        conv2 = tf.nn.bias_add(conv2, bconv2)
+        conv2 = tf.nn.relu(tf.layers.batch_normalization(conv2,momentum=0.9,training =isTrain))
         print(conv2.get_shape(),"conv2")
 
-        wconv3 = tf.Variable(tf.random_normal([30,16,32]), name ="wconv3")
+        wconv3 = tf.Variable(tf.truncated_normal([30,16,32]), name ="wconv3")
         conv3 = tf.contrib.nn.conv1d_transpose(conv2, wconv3,[batch_size, 9315,16], stride=3, padding="SAME")
-        conv3 = tf.nn.relu(tf.layers.batch_normalization(conv3))
+        bconv3 = tf.Variable(tf.zeros([16]), name ="bconv3")
+        conv3 = tf.nn.bias_add(conv3, bconv3)
+        conv3 = tf.nn.relu(tf.layers.batch_normalization(conv3,momentum=0.9,training =isTrain))
         print(conv3.get_shape(),"conv3")
 
-        wconv4 = tf.Variable(tf.random_normal([30,8,16]), name ="wconv4")
+        wconv4 = tf.Variable(tf.truncated_normal([30,8,16]), name ="wconv4")
         conv4 = tf.contrib.nn.conv1d_transpose(conv3, wconv4, [batch_size, 27945,8], stride=3, padding="SAME")
-        conv4 = tf.nn.relu(tf.layers.batch_normalization(conv4))
+        bconv4 = tf.Variable(tf.zeros([8]), name ="bconv4")
+        conv4 = tf.nn.bias_add(conv4, bconv4)
+        conv4 = tf.nn.relu(tf.layers.batch_normalization(conv4,momentum=0.9,training =isTrain))
         print(conv4.get_shape(),"conv4")
 
-        wconv5 = tf.Variable(tf.random_normal([54,1,8]), name ="wconv5")
+        wconv5 = tf.Variable(tf.truncated_normal([54,1,8]), name ="wconv5")
         conv5 = tf.contrib.nn.conv1d_transpose(conv4, wconv5, [batch_size,27998,1], stride=1, padding="VALID")
+        bconv5 = tf.Variable(tf.zeros([1]), name ="bconv5")
+        conv5 = tf.nn.bias_add(conv5, bconv5)
+        conv5 = tf.layers.batch_normalization(conv5,momentum=0.9,training =isTrain)
         conv5 = tf.nn.tanh(conv5)
         print(conv5.get_shape(),"conv5")
         #conv5 = tf.squeeze(conv5, axis = 2)
@@ -336,4 +347,4 @@ with tf.Session() as sess:
     #o = epoch_x
     #np.save("disc_output_fake.npy",o)    
     np.save("disc_output.npy", g)
-    #np.save("generator_output.npy", samp)
+    np.save("generator_output.npy", samp)
