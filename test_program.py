@@ -18,7 +18,7 @@ import time
 
 
 batch_size = 35
-num_steps = 800
+num_steps = 200
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -82,28 +82,28 @@ def generator(x, isTrain=True,reuse=False, batch_size=batch_size):
         x = tf.layers.dense(x, units= 345 * 64,activation = tf.identity,kernel_initializer =tf.contrib.layers.xavier_initializer())
         #x = tf.identity(x)
         x = tf.reshape(x, shape=[-1, 345, 64])
-        x =tf.layers.batch_normalization(x,momentum=0.9, training =isTrain, epsilon=0.00001)#,name = "g_bn_d1")
+        x =tf.layers.batch_normalization(x,momentum=0.9, training =isTrain, epsilon=0.0001)#,name = "g_bn_d1")
         x = tf.nn.relu(x)
         
         #wconv1 = tf.Variable(tf.truncated_normal([30,64,64]), name ="wconv1")
         conv1 = tf.contrib.nn.conv1d_transpose(x,wconv1,[batch_size,1035,64], stride=3,padding ="SAME")
         #bconv1 = tf.Variable(tf.zeros([64]), name ="bconv1")
         conv1 = tf.nn.bias_add(conv1, bconv1)
-        conv1 = tf.nn.relu(tf.layers.batch_normalization(conv1,momentum=0.9, training =isTrain,epsilon=0.00001))#,name="g_bn_conv1"))
+        conv1 = tf.nn.relu(tf.layers.batch_normalization(conv1,momentum=0.9, training =isTrain,epsilon=0.0001))#,name="g_bn_conv1"))
         print(conv1.get_shape(),"conv1")     
 
         #wconv2 = tf.Variable(tf.truncated_normal([30,32,64]), name ="wconv2")
         conv2 = tf.contrib.nn.conv1d_transpose(conv1, wconv2,[batch_size, 3105,32], stride=3, padding="SAME")
         #bconv2 = tf.Variable(tf.zeros([32]), name ="bconv2")
         conv2 = tf.nn.bias_add(conv2, bconv2)
-        conv2 = tf.nn.relu(tf.layers.batch_normalization(conv2,momentum=0.9,training =isTrain,epsilon=0.00001))#,name="g_bn_conv2"))
+        conv2 = tf.nn.relu(tf.layers.batch_normalization(conv2,momentum=0.9,training =isTrain,epsilon=0.0001))#,name="g_bn_conv2"))
         print(conv2.get_shape(),"conv2")
 
         #wconv3 = tf.Variable(tf.truncated_normal([30,16,32]), name ="wconv3")
         conv3 = tf.contrib.nn.conv1d_transpose(conv2, wconv3,[batch_size, 9315,16], stride=3, padding="SAME")
         #bconv3 = tf.Variable(tf.zeros([16]), name ="bconv3")
         conv3 = tf.nn.bias_add(conv3, bconv3)
-        conv3 = tf.nn.relu(tf.layers.batch_normalization(conv3,momentum=0.9,training =isTrain,epsilon=0.00001))#, name="g_bn_conv3"))
+        conv3 = tf.nn.relu(tf.layers.batch_normalization(conv3,momentum=0.9,training =isTrain,epsilon=0.0001))#, name="g_bn_conv3"))
         print(conv3.get_shape(),"conv3")
 
         #wconv4 = tf.Variable(tf.truncated_normal([30,8,16]), name ="wconv4")
@@ -117,7 +117,7 @@ def generator(x, isTrain=True,reuse=False, batch_size=batch_size):
         conv5 = tf.contrib.nn.conv1d_transpose(conv4, wconv5, [batch_size,27998,1], stride=1, padding="VALID")
         #bconv5 = tf.Variable(tf.zeros([1]), name ="bconv5")
         conv5 = tf.nn.bias_add(conv5, bconv5)
-        conv5 = tf.layers.batch_normalization(conv5,momentum=0.9,training =isTrain,epsilon=0.00001)
+        conv5 = tf.layers.batch_normalization(conv5,momentum=0.9,training =isTrain,epsilon=0.0001)
         out = bconv5
         conv5 = tf.nn.tanh(conv5)
         print(conv5.get_shape(),"conv5")
@@ -269,8 +269,8 @@ gen_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
 #extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 #with tf.control_dependencies(extra_update_ops):
 
-optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.002, beta1=0.5)
-optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.002, beta1= 0.5)
+optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5)
+optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.0002, beta1= 0.5)
 
 
 gen_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator')
@@ -343,9 +343,7 @@ saver = tf.train.Saver()
 with tf.Session() as sess:
     #start = time.time()
     sess.run(init)
-    #dl = 1
-    #gl = 1
-    saver.restore(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
+    #saver.restore(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
     for i in range(1, num_steps+1):
         if i% 50 == 0:# and i!=500:
             #print("New Data")
@@ -402,7 +400,7 @@ with tf.Session() as sess:
     #gen = generator(random_vector,batch_size=100,reuse=True)
     samp  = sess.run(gen_sample, feed_dict={random_vector: z, isTrain:False})
     
-    g = sess.run(disc_real, feed_dict={real_image_input: epoch_x, isTrain:True})
+    g = sess.run(disc_real, feed_dict={real_image_input: epoch_x, isTrain:False})
     o = sess.run(disc_real, feed_dict={real_image_input: samp, isTrain:False})
     #o = epoch_x
     np.save("disc_output_fake.npy",o)    
