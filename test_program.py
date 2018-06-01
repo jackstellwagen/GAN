@@ -18,7 +18,7 @@ import time
 
 
 batch_size = 35
-num_steps = 2500
+num_steps = 60000
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -71,7 +71,7 @@ with tf.variable_scope('Generator', reuse=True):
      bconv3 = tf.Variable(tf.zeros([16]), name ="bconv3")
      bconv4 = tf.Variable(tf.zeros([8]), name ="bconv4")
      bconv5 = tf.Variable(tf.zeros([1]), name ="bconv5")
-     """
+     
      wconv1 = tf.Variable(tf.truncated_normal([30,64,64]), name ="wconv1")
      wconv2 = tf.Variable(tf.truncated_normal([30,32,64]), name ="wconv2")
      wconv3 = tf.Variable(tf.truncated_normal([30,16,32]), name ="wconv3")
@@ -83,16 +83,17 @@ with tf.variable_scope('Generator', reuse=True):
      wconv3 = tf.Variable(tf.truncated_normal([30,16,32]), name ="wconv3")
      wconv4 = tf.Variable(tf.truncated_normal([30,8,16]), name ="wconv4")
      wconv5 = tf.Variable(tf.truncated_normal([27,1,8]), name ="wconv5")
+     """
 
 def generator(x, isTrain=True,reuse=False, batch_size=batch_size):
     with tf.variable_scope('Generator', reuse=reuse):
-        x = tf.layers.dense(x, units= 332 * 64,activation = tf.identity,kernel_initializer =tf.contrib.layers.xavier_initializer())
-        #x = tf.identity(x)
-        x = tf.reshape(x, shape=[-1, 332, 64])
+        x = tf.layers.dense(x, units= 345 * 64,activation = tf.identity,kernel_initializer =tf.contrib.layers.xavier_initializer())#332
+        #x = tf.identity(x)#332
+        x = tf.reshape(x, shape=[-1, 345, 64])
         x =tf.layers.batch_normalization(x, training =isTrain)#,momentum=0.9, epsilon=0.0001)#,name = "g_bn_d1")
         x = tf.nn.relu(x)
         print(x.get_shape(), "x")
-        """
+        
         
         #wconv1 = tf.Variable(tf.truncated_normal([30,64,64]), name ="wconv1")
         conv1 = tf.contrib.nn.conv1d_transpose(x,wconv1,[batch_size,1035,64], stride=3,padding ="SAME")
@@ -168,7 +169,7 @@ def generator(x, isTrain=True,reuse=False, batch_size=batch_size):
         conv5 = tf.layers.batch_normalization(conv5,training =isTrain)#momentum=0.9,epsilon=0.0001)
         out = bconv5
         conv5 = tf.nn.tanh(conv5)
-
+        """
         return conv5
 
 def discriminator(x,isTrain=True, reuse=False):
@@ -316,7 +317,7 @@ gen_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
 #with tf.control_dependencies(extra_update_ops):
 
 optimizer_gen = tf.train.AdamOptimizer(learning_rate=0.002, beta1=0.5)
-optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.002, beta1= 0.5)
+optimizer_disc = tf.train.AdamOptimizer(learning_rate=0.0002, beta1= 0.5)
 
 
 gen_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator')
@@ -386,9 +387,15 @@ init = tf.global_variables_initializer()
 
 						
 saver = tf.train.Saver()
+s = time.time()
 with tf.Session() as sess:
     #start = time.time()
     sess.run(init)
+    gloss = np.zeros(shape=[1])
+    dl = 0
+    dlf = 0
+    dlr = 0
+    gl = 0 
     #saver.restore(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
     for i in range(1, num_steps+1):
         if i% 50 == 0:# and i!=500:
@@ -403,8 +410,15 @@ with tf.Session() as sess:
         epoch_x = data[sample,:]
         epoch_x = np.reshape(epoch_x, newshape=[-1, 27998, 1])
         z = np.random.uniform(-1.0, 1.0, size=[batch_size, vector_dim])
+        """
+        if i == 1:
+           dl,_,dlr,dlf = sess.run([disc_loss,train_disc,disc_loss_real, disc_loss_fake], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
+           gl, _ = sess.run([gen_loss,train_gen], feed_dict = {random_vector:z,isTrain:True})
+        """
         #dl,_,dlr,dlf, gl = sess.run([disc_loss,train_op,disc_loss_real, disc_loss_fake,gen_loss], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
+        #if (i//100)%2:
        	dl,_,dlr,dlf = sess.run([disc_loss,train_disc,disc_loss_real, disc_loss_fake], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
+        #if not (i//100)%2:
         gl, _ = sess.run([gen_loss,train_gen], feed_dict = {random_vector:z,isTrain:True})
         """
         if i == 250:
@@ -414,30 +428,15 @@ with tf.Session() as sess:
            out_disc = sess.run([disc_real], feed_dict = {real_image_input:epoch})
            np.save("disc_out.npy", out_disc)
          """
-        if dlf < 0.0001:
-            save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
-            break
-
-        if dl <0.00001:
-           save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
-           print("done")
-           break
-           #real_data = perfect_data + noise_array()
-           epoch = real_data[sample,:]
-           epoch = np.reshape(epoch, newshape=[-1, 27998, 1])
-           out_disc = sess.run([disc_real], feed_dict = {real_image_input:epoch})
-           np.save("disc_out_0loss.npy", out_disc)
-        #if dl<0.00001:
-        #   break
-        #feed_dict = {real_image_input: epoch_x, random_vector: z,
-        #             disc_target: batch_disc_y, gen_target: batch_gen_y, isTrain:True}
-        #_, _, gl, dl = sess.run([train_gen, train_disc, gen_loss, disc_loss],
-        #                        feed_dict=feed_dict)
+        gloss = np.append(gloss,gl)
         if i % 100 == 0 or i == 1:
             print('Step %i: Generator Loss: %f, Discriminator Loss: %f' % (i, gl, dl))
             print("DLR:",dlr,",", "DLF:", dlf)
     save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
-
+    np.save("gloss.npy", gloss)
+    time_taken = time.time()-s
+    print(time_taken, "time taken")
+    np.save("time.npy", np.zeros(shape=[1])+time_taken)
     sample = np.random.randint(n_samp, size=batch_size)
     epoch_x = data[sample,:]
     epoch_x = np.reshape(epoch_x, newshape=[-1, 27998,1])
