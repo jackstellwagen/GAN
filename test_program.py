@@ -18,7 +18,7 @@ import time
 
 
 batch_size = 35
-num_steps = 60000
+num_steps = 400
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -30,15 +30,21 @@ def noise_array():
     return np.random.normal(scale = 0.05, size =(500,27998))
 
 
+def gen_random():
+   if np.random.randint(2):
+      return np.random.randint(300,320)
+   else:
+      return np.random.randint(6000,6500)
+
+#np.random.randint(200,6000)
 perfect_data = np.indices((500,27998))[1]
-sin = lambda t: np.sin(1/np.random.randint(1500,2000) *t)
+sin = lambda t: np.sin(1/gen_random() *t)
 data = np.apply_along_axis(sin, 1, perfect_data) + noise_array()
 
 
 noise = lambda t: np.random.normal(scale = 0.05) * t
 vfunc = np.vectorize(noise)
 #data = vfunc(data)
-
 
 
 
@@ -71,7 +77,7 @@ with tf.variable_scope('Generator', reuse=True):
      bconv3 = tf.Variable(tf.zeros([16]), name ="bconv3")
      bconv4 = tf.Variable(tf.zeros([8]), name ="bconv4")
      bconv5 = tf.Variable(tf.zeros([1]), name ="bconv5")
-     
+     """
      wconv1 = tf.Variable(tf.truncated_normal([30,64,64]), name ="wconv1")
      wconv2 = tf.Variable(tf.truncated_normal([30,32,64]), name ="wconv2")
      wconv3 = tf.Variable(tf.truncated_normal([30,16,32]), name ="wconv3")
@@ -83,18 +89,19 @@ with tf.variable_scope('Generator', reuse=True):
      wconv3 = tf.Variable(tf.truncated_normal([30,16,32]), name ="wconv3")
      wconv4 = tf.Variable(tf.truncated_normal([30,8,16]), name ="wconv4")
      wconv5 = tf.Variable(tf.truncated_normal([27,1,8]), name ="wconv5")
-     """
+     
 
 def generator(x, isTrain=True,reuse=False, batch_size=batch_size):
     with tf.variable_scope('Generator', reuse=reuse):
-        x = tf.layers.dense(x, units= 345 * 64,activation = tf.identity,kernel_initializer =tf.contrib.layers.xavier_initializer())#332
-        #x = tf.identity(x)#332
-        x = tf.reshape(x, shape=[-1, 345, 64])
-        x =tf.layers.batch_normalization(x, training =isTrain)#,momentum=0.9, epsilon=0.0001)#,name = "g_bn_d1")
+        x = tf.layers.dense(x, units= 332 * 64 ,kernel_initializer =tf.contrib.layers.xavier_initializer())#332
+        #x = tf.identity(x)#332 345
+        #x = tf.reshape(x, shape=[-1, 332, 64])
+        x = tf.reshape(x, shape=[-1,332, 1, 64])
+        x = tf.layers.batch_normalization(x,momentum=0.9, training =isTrain, epsilon=0.00001)
         x = tf.nn.relu(x)
         print(x.get_shape(), "x")
         
-        
+        """
         #wconv1 = tf.Variable(tf.truncated_normal([30,64,64]), name ="wconv1")
         conv1 = tf.contrib.nn.conv1d_transpose(x,wconv1,[batch_size,1035,64], stride=3,padding ="SAME")
         #bconv1 = tf.Variable(tf.zeros([64]), name ="bconv1")
@@ -134,42 +141,58 @@ def generator(x, isTrain=True,reuse=False, batch_size=batch_size):
         #conv5 = tf.squeeze(conv5, axis = 2)
         #conv5 = tf.squeeze(conv5, axis = 2)
         """
+        """
         #wconv1 = tf.Variable(tf.truncated_normal([30,64,64]), name ="wconv1")
         conv1 = tf.contrib.nn.conv1d_transpose(x,wconv1,[batch_size,1023,64], stride=3,padding ="VALID")
         #bconv1 = tf.Variable(tf.zeros([64]), name ="bconv1")
         conv1 = tf.nn.bias_add(conv1, bconv1)
-        conv1 = tf.nn.relu(tf.layers.batch_normalization(conv1, training =isTrain))#,momentum=0.9,epsilon=0.0001))#,name="g_bn_conv1"))
+        conv1 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv1, training =isTrain,momentum=0.9,epsilon=0.0001))#,name="g_bn_conv1"))
         print(conv1.get_shape(),"conv1")
 
         #wconv2 = tf.Variable(tf.truncated_normal([30,32,64]), name ="wconv2")
         conv2 = tf.contrib.nn.conv1d_transpose(conv1, wconv2,[batch_size, 3096,32], stride=3, padding="VALID")
         #bconv2 = tf.Variable(tf.zeros([32]), name ="bconv2")
         conv2 = tf.nn.bias_add(conv2, bconv2)
-        conv2 = tf.nn.relu(tf.layers.batch_normalization(conv2,training =isTrain))#momentum=0.9,epsilon=0.0001))#,name="g_bn_conv2"))
+        conv2 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv2,training =isTrain, momentum=0.9,epsilon=0.0001))#,name="g_bn_conv2"))
         print(conv2.get_shape(),"conv2")
 
         #wconv3 = tf.Variable(tf.truncated_normal([30,16,32]), name ="wconv3")
         conv3 = tf.contrib.nn.conv1d_transpose(conv2, wconv3,[batch_size, 9315,16], stride=3, padding="VALID")
         #bconv3 = tf.Variable(tf.zeros([16]), name ="bconv3")
         conv3 = tf.nn.bias_add(conv3, bconv3)
-        conv3 = tf.nn.relu(tf.layers.batch_normalization(conv3,training =isTrain))#momentum=0.9,epsilon=0.0001))#, name="g_bn_conv3"))
+        conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3,training =isTrain, momentum=0.9,epsilon=0.0001))#, name="g_bn_conv3"))
         print(conv3.get_shape(),"conv3")
 
         #wconv4 = tf.Variable(tf.truncated_normal([30,8,16]), name ="wconv4")
         conv4 = tf.contrib.nn.conv1d_transpose(conv3, wconv4, [batch_size, 27972,8], stride=3, padding="VALID")
         #bconv4 = tf.Variable(tf.zeros([8]), name ="bconv4")
         conv4 = tf.nn.bias_add(conv4, bconv4)
-        conv4 = tf.nn.relu(tf.layers.batch_normalization(conv4,training =isTrain))#momentum=0.9,epsilon=0.0001))#, name="g_bn_conv4"))
+        conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4,training =isTrain, momentum=0.9,epsilon=0.0001))#, name="g_bn_conv4"))
         print(conv4.get_shape(),"conv4")
 
         #wconv5 = tf.Variable(tf.truncated_normal([54,1,8]), name ="wconv5")
         conv5 = tf.contrib.nn.conv1d_transpose(conv4, wconv5, [batch_size,27998,1], stride=1, padding="VALID")
         #bconv5 = tf.Variable(tf.zeros([1]), name ="bconv5")
         conv5 = tf.nn.bias_add(conv5, bconv5)
-        conv5 = tf.layers.batch_normalization(conv5,training =isTrain)#momentum=0.9,epsilon=0.0001)
+        conv5 = tf.layers.batch_normalization(conv5,training =isTrain, momentum=0.9,epsilon=0.0001)
         out = bconv5
         conv5 = tf.nn.tanh(conv5)
         """
+        conv1 = tf.layers.conv2d_transpose(x, 64, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv1 = tf.nn.relu(tf.layers.batch_normalization(conv1, training =isTrain,momentum=0.9,epsilon=0.0001))
+
+        conv2 = tf.layers.conv2d_transpose(conv1, 32, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv2 = tf.nn.relu(tf.layers.batch_normalization(conv2, training =isTrain,momentum=0.9,epsilon=0.0001))
+
+        conv3 = tf.layers.conv2d_transpose(conv2, 16, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv3 = tf.nn.relu(tf.layers.batch_normalization(conv3, training =isTrain,momentum=0.9,epsilon=0.0001))
+
+        conv4 = tf.layers.conv2d_transpose(conv3, 4, [30,1], strides=[3,1],kernel_initializer = tf.contrib.layers.xavier_initializer())
+        conv4 = tf.nn.relu(tf.layers.batch_normalization(conv4, training =isTrain,momentum=0.9,epsilon=0.0001))
+
+        conv5 = tf.layers.conv2d_transpose(conv4, 1, [27,1], strides=[1,1],kernel_initializer = tf.contrib.layers.xavier_initializer())# padding="same")
+        conv5 = tf.squeeze(conv5, axis = 2)
+        conv5 = tf.nn.tanh(conv5)
         return conv5
 
 def discriminator(x,isTrain=True, reuse=False):
@@ -287,8 +310,14 @@ isTrain = tf.placeholder(dtype=tf.bool)
 
 gen_sample = generator(random_vector, isTrain, batch_size=batch_size)
 
+
 disc_real,disc_real_logits = discriminator(real_image_input,isTrain)
 disc_fake,disc_fake_logits = discriminator(gen_sample,isTrain, reuse=True)
+"""
+disc_real,disc_real_logits = discriminator(real_image_input,isTrain=False)
+disc_fake,disc_fake_logits = discriminator(gen_sample,isTrain=False, reuse=True)
+"""
+disc_fake2,disc_fake_logits2 = discriminator(gen_sample,isTrain=False, reuse=True)
 
 #disc_real = discriminator(real_image_input,isTrain)
 #gan_model = discriminator(gen_sample,isTrain, reuse=True)
@@ -311,7 +340,7 @@ disc_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
     logits=disc_fake_logits, labels=tf.zeros_like(disc_fake_logits)))
 disc_loss = disc_loss_real + disc_loss_fake
 gen_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-    logits=disc_fake_logits, labels=tf.ones_like(disc_fake_logits)))
+    logits=disc_fake_logits2, labels=tf.ones_like(disc_fake_logits2)))
 
 #extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 #with tf.control_dependencies(extra_update_ops):
@@ -393,47 +422,25 @@ with tf.Session() as sess:
     sess.run(init)
     gloss = np.zeros(shape=[1])
     dl = 0
-    dlf = 0
     dlr = 0
-    gl = 0 
+    dlf = 0
     #saver.restore(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
     for i in range(1, num_steps+1):
         if i% 50 == 0:# and i!=500:
-            #print("New Data")
-            #data = gen_fake_data()
-             #data = perfect_data + noise_array()
              start = time.time()
              data = np.apply_along_axis(sin, 1, perfect_data) + noise_array()
-             #data = perfect_data+noise_array()
              print(time.time()-start, "time")
         sample = np.random.randint(n_samp, size=batch_size)
         epoch_x = data[sample,:]
         epoch_x = np.reshape(epoch_x, newshape=[-1, 27998, 1])
-        z = np.random.uniform(-1.0, 1.0, size=[batch_size, vector_dim])
-        """
-        if i == 1:
-           dl,_,dlr,dlf = sess.run([disc_loss,train_disc,disc_loss_real, disc_loss_fake], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
-           gl, _ = sess.run([gen_loss,train_gen], feed_dict = {random_vector:z,isTrain:True})
-        """
-        #dl,_,dlr,dlf, gl = sess.run([disc_loss,train_op,disc_loss_real, disc_loss_fake,gen_loss], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
-        #if (i//100)%2:
+        z = np.random.normal(-1.0, 1.0, size=[batch_size, vector_dim])
        	dl,_,dlr,dlf = sess.run([disc_loss,train_disc,disc_loss_real, disc_loss_fake], feed_dict = {real_image_input:epoch_x, random_vector:z, isTrain:True})
-        #if not (i//100)%2:
         gl, _ = sess.run([gen_loss,train_gen], feed_dict = {random_vector:z,isTrain:True})
-        """
-        if i == 250:
-           real_data = perfect_data + noise_array()
-           epoch = real_data[sample,:]
-           epoch = np.reshape(epoch, newshape=[-1, 27998, 1])
-           out_disc = sess.run([disc_real], feed_dict = {real_image_input:epoch})
-           np.save("disc_out.npy", out_disc)
-         """
-        gloss = np.append(gloss,gl)
         if i % 100 == 0 or i == 1:
             print('Step %i: Generator Loss: %f, Discriminator Loss: %f' % (i, gl, dl))
             print("DLR:",dlr,",", "DLF:", dlf)
     save_path = saver.save(sess, "/home/jack/caltech_research/cell_data_GAN_network/cell_data_GAN_trained.ckpt")
-    np.save("gloss.npy", gloss)
+    #np.save("gloss.npy", gloss)
     time_taken = time.time()-s
     print(time_taken, "time taken")
     np.save("time.npy", np.zeros(shape=[1])+time_taken)
@@ -441,14 +448,20 @@ with tf.Session() as sess:
     epoch_x = data[sample,:]
     epoch_x = np.reshape(epoch_x, newshape=[-1, 27998,1])
     print(epoch_x)
-    z = np.random.uniform(-1., 1., size=[batch_size, vector_dim])
+    z = np.random.normal(-1., 1., size=[batch_size, vector_dim])
+    z2 = np.random.uniform(-1., 1., size=[batch_size, vector_dim])
+    #z[34] = 0
+    #z[33] = 0.2
+    #z[32] = -0.2
     #gen = generator(random_vector,batch_size=100,reuse=True)
     samp  = sess.run(gen_sample, feed_dict={random_vector: z, isTrain:False})
-    
+    samp2  = sess.run(gen_sample, feed_dict={random_vector: z2, isTrain:False})    
+
     g = sess.run(disc_real, feed_dict={real_image_input: epoch_x, isTrain:False})
     o = sess.run(disc_real, feed_dict={real_image_input: samp, isTrain:False})
     #o = epoch_x
     np.save("disc_output_fake.npy",o)    
     np.save("disc_output.npy", g)
     np.save("generator_output.npy", samp)
+    np.save("generator_output2.npy", samp2)
     #np.save("generator_output2.npy", samp2)
