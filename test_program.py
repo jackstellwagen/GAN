@@ -18,7 +18,7 @@ import time
 
 
 batch_size = 35
-num_steps = 400
+num_steps = 10000
 vector_dim = 200
 tf.reset_default_graph()
 
@@ -38,7 +38,7 @@ def gen_random():
 
 #np.random.randint(200,6000)
 perfect_data = np.indices((500,27998))[1]
-sin = lambda t: np.sin(1/gen_random() *t)
+sin = lambda t: np.sin(1/np.random.randint(200,6000) *t)
 data = np.apply_along_axis(sin, 1, perfect_data) + noise_array()
 
 
@@ -205,14 +205,22 @@ def discriminator(x,isTrain=True, reuse=False):
         #conv1 = tf.nn.leaky_relu(conv1)
         conv2 = tf.layers.conv1d(conv1, 16, 30,strides =2,padding = "Same", kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())
         conv2 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv2, momentum=0.9, training =isTrain, epsilon=0.00001))
+
         conv3 = tf.layers.conv1d(conv2, 32, 30,strides =2, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())
         conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3, momentum=0.9, training =isTrain, epsilon=0.00001))
+
         conv4 = tf.layers.conv1d(conv3, 64, 30,strides =2, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
         conv4 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv4, momentum=0.9, training =isTrain, epsilon=0.00001))
         print(conv4.get_shape(),"conv4")
-        #conv5 = tf.layers.conv1d(conv4, 1,1167, strides = 1,padding ="valid",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
-        #print(conv5.get_shape(), "conv5")
-        #out = tf.nn.sigmoid(conv5)
+        """ 
+        conv5 = tf.layers.conv1d(conv4, 128, 30,strides =3, padding = "Same",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
+        conv5 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv5, momentum=0.9, training =isTrain, epsilon=0.00001))
+
+        conv6 = tf.layers.conv1d(conv5, 1, 583, strides = 1,padding ="valid",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
+        print(conv6.get_shape(), "conv6")
+        out = tf.nn.sigmoid(conv6)
+        return out, conv6
+        """
         d3 = conv4
         flatten = tf.contrib.layers.flatten(conv4)
         dense1 = tf.layers.dense(flatten, 2048,kernel_initializer = tf.contrib.layers.xavier_initializer())
@@ -230,7 +238,7 @@ def discriminator(x,isTrain=True, reuse=False):
         out = tf.nn.sigmoid(dense3)
         #dense3 = tf.nn.sigmoid(dense3)
         #return dense3
-        
+
         #return out,dense3
         return out,dense3
         """
@@ -271,33 +279,6 @@ def discriminator(x,isTrain=True, reuse=False):
         #print(dense2.get_shape(), 'dense2')
         #print(dense3.get_shape(), 'dense3')
         #return out, dense3
-
-
-
-        #print(conv2.get_shape(), "conv2")
-
-        """
-        print(x.get_shape(),"xshape")
-        conv1 = tf.layers.conv2d(x, 64, [5,4])
-        print(conv1.get_shape(),'o')
-        conv1 = tf.nn.tanh(conv1)
-        conv1_pool = tf.layers.average_pooling2d(conv1, 2, 2)
-        #print(conv1_pool.get_shape(),'pool')
-        conv2 = tf.layers.conv2d(conv1_pool, 128, 5)
-        #print(conv2.get_shape(),'o2')
-        conv2 = tf.nn.tanh(conv2)
-        conv2_pool= tf.layers.average_pooling2d(conv2, 2, 2)
-        #print(conv2_pool.get_shape(),'pool2')
-        conv2 = tf.contrib.layers.flatten(conv2_pool)
-        #print(conv2.get_shape(),'flatten')
-        conv2 = tf.layers.dense(conv2, 1024)
-        #print(conv2_pool.get_shape(),'dense')
-        conv2 = tf.nn.tanh(conv2)
-        #print(conv2.get_shape())
-        # Output 2 classes: Real and Fake images
-        x = tf.layers.dense(conv2, 2)
-        #print(x.get_shape(),'final out')
-        """
 
 
 #return dense3
