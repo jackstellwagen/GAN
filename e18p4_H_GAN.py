@@ -35,7 +35,7 @@ print(data.shape)
 
 def generator(x, isTrain=True,reuse=False, batch_size=batch_size):
     with tf.variable_scope('Generator', reuse=reuse):
-
+        
         x = tf.layers.dense(x, units= 6 * 128 ,kernel_initializer =tf.contrib.layers.xavier_initializer())#332
         x = tf.reshape(x, shape=[-1,6, 1, 128])
         x = tf.layers.batch_normalization(x,momentum=0.9, training =isTrain, epsilon=0.00001)
@@ -55,7 +55,30 @@ def generator(x, isTrain=True,reuse=False, batch_size=batch_size):
 
         #conv3 = tf.layers.conv2d_transpose(conv2, 1, [6,1], strides=[2,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding = "same")
         #conv3 = tf.nn.relu(tf.layers.batch_normalization(conv3, training =isTrain,momentum=0.9,epsilon=0.00001))
+        """
+        x = tf.layers.dense(x, units= 3 * 128 ,kernel_initializer =tf.contrib.layers.xavier_initializer())#332
+        x = tf.reshape(x, shape=[-1,3, 1, 128])
+        x = tf.layers.batch_normalization(x,momentum=0.9, training =isTrain, epsilon=0.00001)
+        x = tf.nn.relu(x)
+        print(x.get_shape(), "x")
 
+        conv1 = tf.layers.conv2d_transpose(x, 64, [5,1], strides=[2,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding= "same")
+        conv1 = tf.nn.relu(tf.layers.batch_normalization(conv1, training =isTrain,momentum=0.9,epsilon=0.00001))
+        print(conv1.get_shape(), "conv1")
+
+        conv2 = tf.layers.conv2d_transpose(conv1, 32, [5,1], strides=[2,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding = "same")
+        conv2 = tf.nn.relu(tf.layers.batch_normalization(conv2, training =isTrain,momentum=0.9,epsilon=0.00001))
+        #conv2 = tf.squeeze(conv2, axis = 2)
+        #conv2 = tf.nn.tanh(conv2)
+        
+
+
+        conv3 = tf.layers.conv2d_transpose(conv2, 1, [5,1], strides=[2,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding = "same")
+        #conv3 = tf.nn.relu(tf.layers.batch_normalization(conv3, training =isTrain,momentum=0.9,epsilon=0.00001))
+        conv3 = tf.squeeze(conv3, axis =2)
+        conv3 = tf.nn.tanh(conv3)
+        return conv3
+        """
         """
 
         conv4 = tf.layers.conv2d_transpose(conv3, 4, [10,1], strides=[2,1],kernel_initializer = tf.contrib.layers.xavier_initializer(), padding ="same")
@@ -81,9 +104,18 @@ def discriminator(x,isTrain=True, reuse=False):
         conv2 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv2, momentum=0.9, training =isTrain, epsilon=0.00001))
  
         conv3 = tf.layers.conv1d(conv2, 1, 6,strides =1, padding = "VALID",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
-        
+        """
+        conv3 = tf.layers.conv1d(conv1, 512, 5,strides =2,padding = "Same", kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())
+        conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3, momentum=0.9, training =isTrain, epsilon=0.00001))
+
+        conv4 = tf.layers.conv1d(conv3, 1, 3,strides =1, padding = "VALID",kernel_initializer =tf.contrib.layers.xavier_initializer_conv2d())
+        out = tf.nn.sigmoid(conv4)
+        return out, conv4
+        """
+               
         out = tf.nn.sigmoid(conv3)
         return out, conv3
+        
         
         conv3 = tf.layers.conv1d(conv2, 64, 6,strides =2, padding = "Same",kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d())
         conv3 = tf.nn.leaky_relu(tf.layers.batch_normalization(conv3, momentum=0.9, training =isTrain, epsilon=0.00001))
@@ -224,7 +256,7 @@ with tf.Session() as sess:
     dl = 0
     dlr = 0
     dlf = 0
-    #saver.restore(sess, "/home/jack/caltech_research/e18p4_H_GAN_network/e18p4_H_GAN_trained.ckpt")
+    saver.restore(sess, "/home/jack/caltech_research/e18p4_H_GAN_network2/e18p4_H_GAN_trained.ckpt")
     for i in range(1, num_steps+1):
         """
         if i% 50 == 0:# and i!=500:
@@ -261,7 +293,7 @@ with tf.Session() as sess:
         if i % 100 == 0 or i == 1:
             print('Step %i: Generator Loss: %f, Discriminator Loss: %f' % (i, gl, dl))
             print("DLR:",dlr,",", "DLF:", dlf)
-    #save_path = saver.save(sess, "/home/jack/caltech_research/e18p4_H_GAN_network2/e18p4_H_GAN_trained.ckpt")
+    save_path = saver.save(sess, "/home/jack/caltech_research/e18p4_H_GAN_network2/e18p4_H_GAN_trained.ckpt")
     #np.save("gloss.npy", gloss)
     time_taken = time.time()-s
     print(time_taken, "time taken")
@@ -284,7 +316,7 @@ with tf.Session() as sess:
     #o = epoch_x
     np.save("disc_output_fake.npy",o)    
     np.save("disc_output.npy", g)
-    np.save("generator_output.npy", samp)
+    np.save("e18p4_H_incremental_training/generator_output.npy", samp)
     np.save("generator_output2.npy", samp2)
     #np.save("generator_output2.npy", samp2)
 
