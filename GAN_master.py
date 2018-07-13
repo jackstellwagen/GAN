@@ -5,7 +5,6 @@ import scipy.io
 import scipy
 import time
 
-
 tf.reset_default_graph()
 
 def noise_array():
